@@ -12,6 +12,9 @@ public class GridManager : MonoBehaviour
     private Cell[,] cells;
     private readonly List<Room> rooms = new List<Room>();
 
+    public event Action<Room> RoomCommitted;
+    public event Action<Room> RoomRemoved;
+
     public int Rows => config.rows;
     public int Columns => config.columns;
     public float CellSize => config.cellSize;
@@ -92,21 +95,32 @@ public class GridManager : MonoBehaviour
     {
         var room = new Room(minRow, maxRow, minCol, maxCol, clueCell);
         rooms.Add(room);
-        
+
         for (int r = minRow; r <= maxRow; r++)
             for (int c = minCol; c <= maxCol; c++)
                 GetCell(r, c)?.SetAssignedRoom(room);
-        
+
+        RoomCommitted?.Invoke(room);
         return room;
     }
-    
+
     public void RemoveRoom(Room room)
     {
         if (room == null) return;
         for (int r = room.MinRow; r <= room.MaxRow; r++)
             for (int c = room.MinColumn; c <= room.MaxColumn; c++)
                 GetCell(r, c)?.SetAssignedRoom(null);
-        
+
         rooms.Remove(room);
+        RoomRemoved?.Invoke(room);
+    }
+
+    public bool IsFullyCovered()
+    {
+        for (int r = 0; r < config.rows; r++)
+            for (int c = 0; c < config.columns; c++)
+                if (GetCell(r, c)?.AssignedRoom == null) return false;
+
+        return true;
     }
 }
