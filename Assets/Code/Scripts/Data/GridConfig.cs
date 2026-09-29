@@ -12,6 +12,7 @@ public class GridConfig : ScriptableObject
         public int row;
         public int col;
         [Min(1)] public int value;
+        public CatColor color;
     }
     
     [Min(1)] public int rows = 8;
@@ -20,18 +21,20 @@ public class GridConfig : ScriptableObject
     
     public ClueEntry[] clues = Array.Empty<ClueEntry>();
 
-    public bool TryGetClue(int row, int col, out int value)
+    public bool TryGetClue(int row, int col, out int value, out CatColor color)
     {
         foreach (var clue in clues)
         {
             if (clue.row == row && clue.col == col)
             {
                 value = clue.value;
+                color = clue.color;
                 return true;
             }
         }
         
         value = 0;
+        color = default;
         return false;
     }
 }

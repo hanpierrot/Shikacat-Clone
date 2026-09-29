@@ -19,12 +19,16 @@ MonoBehaviour:
   - row: 0
     col: 2
     value: 5
+    color: 4
   - row: 2
     col: 0
     value: 8
+    color: 0
   - row: 1
     col: 3
     value: 6
+    color: 2
   - row: 4
     col: 4
     value: 6
+    color: 9
