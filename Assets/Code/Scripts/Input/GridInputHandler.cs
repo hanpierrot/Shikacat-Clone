@@ -5,23 +5,24 @@ using UnityEngine;
 
 public class GridInputHandler : MonoBehaviour
 {
-    public event Action<Vector2> DragStarted;
-    public event Action<Vector2> DragMoved;
-    public event Action DragEnded;
+    public event Action<Vector2> PressStarted;
+    public event Action<Vector2> PressMoved;
+    public event Action<Vector2, bool> PressEnded;
+    
+    [Range(0f, 50f)]
+    [SerializeField] private float dragThreshold = 10f;
 
+    private bool isPressed;
     private bool isDragging;
+    private Vector2 pressPosition;
     private int activeFingerId = -1;
     
     private void Update()
     {
         if (Input.touchCount > 0)
-        {
             HandleTouchInput();
-        }
         else
-        {
             HandleMouseInput();
-        }
     }
 
     private void HandleTouchInput()
@@ -32,21 +33,17 @@ public class GridInputHandler : MonoBehaviour
         {
             case TouchPhase.Began:
                 activeFingerId = touch.fingerId;
-                isDragging = true;
-                DragStarted?.Invoke(touch.position);
+                BeginPress(touch.position);
                 break;
             case TouchPhase.Moved:
             case TouchPhase.Stationary:
-                if (isDragging && touch.fingerId == activeFingerId)
-                    DragMoved?.Invoke(touch.position);
+                if (isPressed && touch.fingerId == activeFingerId)
+                    UpdatePress(touch.position);
                 break;
             case TouchPhase.Ended:
             case TouchPhase.Canceled:
-                if (isDragging && touch.fingerId == activeFingerId)
-                {
-                    isDragging = false;
-                    DragEnded?.Invoke();
-                }
+                if (isPressed && touch.fingerId == activeFingerId)
+                    EndPress(touch.position);
                 activeFingerId = -1;
                 break;
         }
@@ -56,17 +53,40 @@ public class GridInputHandler : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0))
         {
+            BeginPress(Input.mousePosition);
+        }
+        else if (Input.GetMouseButton(0) && isPressed)
+        {
+            UpdatePress(Input.mousePosition);
+        }
+        else if (Input.GetMouseButtonUp(0) && isPressed)
+        {
+            EndPress(Input.mousePosition);
+        }
+    }
+    
+    private void BeginPress(Vector2 position)
+    {
+        isPressed = true;
+        isDragging = false;
+        pressPosition = position;
+        PressStarted?.Invoke(position);
+    }
+
+    private void UpdatePress(Vector2 position)
+    {
+        if (!isDragging && Vector2.Distance(pressPosition, position) >= dragThreshold)
             isDragging = true;
-            DragStarted?.Invoke(Input.mousePosition);
-        }
-        else if (Input.GetMouseButton(0) && isDragging)
-        {
-            DragMoved?.Invoke(Input.mousePosition);
-        }
-        else if (Input.GetMouseButtonUp(0) && isDragging)
-        {
-            isDragging = false;
-            DragEnded?.Invoke();
-        }
+        
+        PressMoved?.Invoke(position);
+    }
+    
+    private void EndPress(Vector2 position)
+    {
+        isPressed = false;
+
+        PressEnded?.Invoke(position, isDragging);
+        
+        isDragging = false;
     }
 }

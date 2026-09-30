@@ -9,7 +9,7 @@ public class Room
     public int MinColumn { get; }
     public int MaxColumn { get; }
     public Cell ClueCell { get; }
-    public SpriteRenderer Visual { get; set; }
+    public RoomVisual Visual { get; set; }
 
     public int Width => MaxColumn - MinColumn + 1;
     public int Height => MaxRow - MinRow + 1;

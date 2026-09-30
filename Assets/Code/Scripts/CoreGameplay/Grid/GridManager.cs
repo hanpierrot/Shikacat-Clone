@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class GridManager : MonoBehaviour
+public class GridManager : MonoSingleton<GridManager>
 {
     [SerializeField] private GridConfig config;
     [SerializeField] private Cell cellPrefab;
@@ -11,9 +11,10 @@ public class GridManager : MonoBehaviour
     [SerializeField] private Vector2 boardSize = new Vector2(8f, 8f);
     [SerializeField] private Vector2 outerPadding = Vector2.zero;
     [SerializeField, Range(0f, 1f)] private float spacingRatio = 0.1f;
-    [SerializeField] private CatPalette catPalette; 
-    
+    [SerializeField] private CatPalette catPalette;
+
     public event Action<Room> RoomRemoved;
+    public event Action<Room> RoomCommitted;
     
     private Cell[,] cells;
     private float cellSize;
@@ -26,8 +27,9 @@ public class GridManager : MonoBehaviour
     public float CellSize => cellSize;
     public IReadOnlyList<Room> Rooms => rooms;
 
-    private void Awake()
+    protected override void Awake()
     {
+        base.Awake();
         BuildGrid(config);
     }
 
@@ -148,6 +150,7 @@ public class GridManager : MonoBehaviour
             for (int c = minCol; c <= maxCol; c++)
                 GetCell(r, c)?.SetAssignedRoom(room);
         
+        RoomCommitted?.Invoke(room);
         return room;
     }
     
@@ -160,5 +163,14 @@ public class GridManager : MonoBehaviour
         
         rooms.Remove(room);
         RoomRemoved?.Invoke(room);
+    }
+    
+    public bool IsGridFull()
+    {
+        for (int r = 0; r < config.rows; r++)
+            for (int c = 0; c < config.columns; c++)
+                if (GetCell(r, c)?.AssignedRoom == null) return false;
+
+        return true;
     }
 }

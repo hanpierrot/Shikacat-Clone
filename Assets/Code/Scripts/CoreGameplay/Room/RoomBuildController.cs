@@ -6,22 +6,22 @@ using UnityEngine;
 [RequireComponent(typeof(GridInputHandler))]
 public class RoomBuildController : MonoBehaviour
 {
-    [SerializeField] private GridManager gridManager;
     [SerializeField] private Camera targetCamera;
     [SerializeField] private GridInputHandler inputHandler;
+    [SerializeField] private RoomRemoveController roomRemoveController;
     
     [SerializeField] private SpriteRenderer dragPreviewOverlay;
     [SerializeField] private Sprite validPreviewSprite;
     [SerializeField] private Sprite invalidPreviewSprite;
-    [SerializeField] private SpriteRenderer roomPanelPrefab;
+    [SerializeField] private RoomVisual roomPanelPrefab;
     [SerializeField] private Transform roomVisualRoot;
     [SerializeField] private CatPalette catPalette;
     
-    private readonly List<SpriteRenderer> roomPanelPool = new List<SpriteRenderer>();
+    private readonly List<RoomVisual> roomPanelPool = new List<RoomVisual>();
 
     private int startRow, startCol;
     private int currentMinRow, currentMaxRow, currentMinCol, currentMaxCol;
-    private bool currentIsValid;
+    private bool isPressValid;
 
     private void Awake()
     {
@@ -30,7 +30,7 @@ public class RoomBuildController : MonoBehaviour
 
         if (roomVisualRoot != null)
         {
-            var existingPanels = roomVisualRoot.GetComponentsInChildren<SpriteRenderer>(true);
+            var existingPanels = roomVisualRoot.GetComponentsInChildren<RoomVisual>(true);
             roomPanelPool.AddRange(existingPanels);
             foreach (var panel in existingPanels)
                 panel.gameObject.SetActive(false);
@@ -39,49 +39,83 @@ public class RoomBuildController : MonoBehaviour
 
     private void OnEnable()
     {
-        inputHandler.DragStarted += TryBeginDrag;
-        inputHandler.DragMoved += UpdateDrag;
-        inputHandler.DragEnded += EndDrag;
-        gridManager.RoomRemoved += ReleaseRoomPanel;
+        inputHandler.PressStarted += HandlePressStarted;
+        inputHandler.PressMoved += HandlePressMoved;
+        inputHandler.PressEnded += HandlePressEnded;
+        GridManager.Instance.RoomRemoved += ReleaseRoomPanel;
     }
 
     private void OnDisable()
     {
-        inputHandler.DragStarted -= TryBeginDrag;
-        inputHandler.DragMoved -= UpdateDrag;
-        inputHandler.DragEnded -= EndDrag;
-        gridManager.RoomRemoved -= ReleaseRoomPanel;
+        inputHandler.PressStarted -= HandlePressStarted;
+        inputHandler.PressMoved -= HandlePressMoved;
+        inputHandler.PressEnded -= HandlePressEnded;
+        GridManager.Instance.RoomRemoved -= ReleaseRoomPanel;
     }
 
-    private void TryBeginDrag(Vector2 screenPosition)
+    private void HandlePressStarted(Vector2 screenPosition)
     {
         Vector3 world = targetCamera.ScreenToWorldPoint(screenPosition);
-        if (!gridManager.WorldToGrid(world, out startRow, out startCol)) return;
-        
+        isPressValid = GridManager.Instance.WorldToGrid(world, out startRow, out startCol);
+        if (!isPressValid) return;
+
         SetPreviewBounds(startRow, startRow, startCol, startCol);
     }
-
-    private void UpdateDrag(Vector2 screenPosition)
+    
+    private void HandlePressMoved(Vector2 screenPosition)
     {
+        if (!isPressValid) return;
+
         Vector3 world = targetCamera.ScreenToWorldPoint(screenPosition);
-        if (!gridManager.WorldToGrid(world, out int row, out int col)) return;
+        if (!GridManager.Instance.WorldToGrid(world, out int row, out int col)) return;
 
         SetPreviewBounds(
             Mathf.Min(startRow, row), Mathf.Max(startRow, row),
             Mathf.Min(startCol, col), Mathf.Max(startCol, col));
     }
-    
-    private void EndDrag()
+
+    private void HandlePressEnded(Vector2 screenPosition, bool wasDrag)
     {
+        if (!isPressValid) return;
+        
+        bool isValid = TryValidateSelection(out _);
+        if (!isValid)
+        {
+            UpdatePreviewOverlay(invalidPreviewSprite);
+            StartCoroutine(ResolveAfterDelay(wasDrag));
+            return;
+        }
+
         if (dragPreviewOverlay != null) dragPreviewOverlay.gameObject.SetActive(false);
         
+        ResolvePressEnd(wasDrag);
+    }
+    private IEnumerator ResolveAfterDelay(bool wasDrag)
+    {
+        yield return new WaitForSeconds(0.25f);
+        if (dragPreviewOverlay != null) dragPreviewOverlay.gameObject.SetActive(false);
+        ResolvePressEnd(wasDrag);
+    }
+    
+    private void ResolvePressEnd(bool wasDrag)
+    {
+        bool handledAsRemove = !wasDrag && roomRemoveController != null
+                                        && roomRemoveController.TryRemoveAt(currentMinRow, currentMinCol);
+
+        if (!handledAsRemove)
+            TryCommitSelection();
+
+        ResetBounds();
+        isPressValid = false;
+    }
+    
+    private void TryCommitSelection()
+    {
         if (TryValidateSelection(out Cell clueCell))
         {
-            Room room = gridManager.CommitRoom(currentMinRow, currentMaxRow, currentMinCol, currentMaxCol, clueCell);
+            Room room = GridManager.Instance.CommitRoom(currentMinRow, currentMaxRow, currentMinCol, currentMaxCol, clueCell);
             SpawnRoomPanel(room, clueCell.ClueColor);
         }
-        
-        ResetBounds();
     }
 
     private void SetPreviewBounds(int minRow, int maxRow, int minCol, int maxCol)
@@ -91,18 +125,17 @@ public class RoomBuildController : MonoBehaviour
         currentMinCol = minCol;
         currentMaxCol = maxCol;
         
-        currentIsValid = TryValidateSelection(out _);
-        UpdatePreviewOverlay();
+        UpdatePreviewOverlay(validPreviewSprite);
     }
 
-    private void UpdatePreviewOverlay()
+    private void UpdatePreviewOverlay(Sprite overlaySprite)
     {
         if (dragPreviewOverlay == null) return;
         
-        gridManager.GetWorldRect(currentMinRow, currentMaxRow, currentMinCol, currentMaxCol, out Vector3 center, out Vector2 size);
+        GridManager.Instance.GetWorldRect(currentMinRow, currentMaxRow, currentMinCol, currentMaxCol, out Vector3 center, out Vector2 size);
         dragPreviewOverlay.transform.position = center;
         dragPreviewOverlay.size = size;
-        dragPreviewOverlay.sprite = currentIsValid ? validPreviewSprite : invalidPreviewSprite;
+        dragPreviewOverlay.sprite = overlaySprite;
         dragPreviewOverlay.gameObject.SetActive(true);
     }
 
@@ -111,21 +144,19 @@ public class RoomBuildController : MonoBehaviour
         if (roomPanelPrefab == null || catPalette == null) return;
         if (!catPalette.TryGet(color, out var entry)) return;
         
-        SpriteRenderer panel = GetPooledPanel();
-        gridManager.GetWorldRect(room.MinRow, room.MaxRow, room.MinColumn, room.MaxColumn, out Vector3 center, out Vector2 size);
-        panel.transform.position = center;
-        panel.size = size;
-        panel.sprite = entry.panelBoxSprite;
+        RoomVisual panel = GetPooledPanel();
+        GridManager.Instance.GetWorldRect(room.MinRow, room.MaxRow, room.MinColumn, room.MaxColumn, out Vector3 center, out Vector2 size);
+        panel.SetUp(center, size, entry.panelBoxSprite, entry.panelBoxWallSprite);
         panel.gameObject.SetActive(true);
         room.Visual = panel;
     }
 
-    private SpriteRenderer GetPooledPanel()
+    private RoomVisual GetPooledPanel()
     {
         foreach (var panel in roomPanelPool)
             if (!panel.gameObject.activeSelf) return panel;
         
-        SpriteRenderer newPanel = Instantiate(roomPanelPrefab, roomVisualRoot);
+        RoomVisual newPanel = Instantiate(roomPanelPrefab, roomVisualRoot);
         roomPanelPool.Add(newPanel);
         return newPanel;
     }
@@ -152,7 +183,7 @@ public class RoomBuildController : MonoBehaviour
         int height = currentMaxRow - currentMinRow + 1;
         int area = width * height;
         
-        if (!gridManager.IsAreaFree(currentMinRow, currentMaxRow, currentMinCol, currentMaxCol))
+        if (!GridManager.Instance.IsAreaFree(currentMinRow, currentMaxRow, currentMinCol, currentMaxCol))
             return false;
 
         int clueCount = 0;
@@ -160,7 +191,7 @@ public class RoomBuildController : MonoBehaviour
         {
             for (int c = currentMinCol; c <= currentMaxCol; c++)
             {
-                Cell cell = gridManager.GetCell(r, c);
+                Cell cell = GridManager.Instance.GetCell(r, c);
                 if (cell == null || !cell.HasClue) continue;
                 
                 clueCount++;

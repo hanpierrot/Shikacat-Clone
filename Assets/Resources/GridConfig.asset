@@ -23,7 +23,7 @@ MonoBehaviour:
   - row: 2
     col: 0
     value: 8
-    color: 0
+    color: 10
   - row: 1
     col: 3
     value: 6

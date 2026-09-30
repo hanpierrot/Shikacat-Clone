@@ -15,37 +15,49 @@ MonoBehaviour:
   entries:
   - color: 0
     catIconSprite: {fileID: 21300000, guid: 509f409a3d789514fbacb7e96445d17d, type: 3}
-    panelBoxSprite: {fileID: 21300000, guid: 852082236852399469c25957dbe0ab85, type: 3}
+    panelBoxSprite: {fileID: -2024555208, guid: 157fd5543146a7445b0d5ebd4e894f25, type: 3}
+    panelBoxWallSprite: {fileID: 21300000, guid: 84338da484d79e744a592c26364652ab, type: 3}
   - color: 1
     catIconSprite: {fileID: 21300000, guid: cb7258e003d6ab149910114eade54f50, type: 3}
-    panelBoxSprite: {fileID: 21300000, guid: 3d3bfea1e393dda4c82a1d328d659f62, type: 3}
+    panelBoxSprite: {fileID: -1157654998, guid: 3d3bfea1e393dda4c82a1d328d659f62, type: 3}
+    panelBoxWallSprite: {fileID: 21300000, guid: 83e03e1020ae5c94ea1f31689fba7ab9, type: 3}
   - color: 2
     catIconSprite: {fileID: 21300000, guid: 6f83f654c0dacd948986e3bfb8b496ac, type: 3}
-    panelBoxSprite: {fileID: 21300000, guid: fd1913ac9c0b74343bb7405b3838dda7, type: 3}
+    panelBoxSprite: {fileID: 387519324, guid: fd1913ac9c0b74343bb7405b3838dda7, type: 3}
+    panelBoxWallSprite: {fileID: 21300000, guid: b6ba7c67d0a1cbb41a2430f43bd5d99b, type: 3}
   - color: 3
     catIconSprite: {fileID: 21300000, guid: de38cdeed243afb40917421404fdc701, type: 3}
-    panelBoxSprite: {fileID: 21300000, guid: fd5fdd6ed8df8b044a74782ad55030a0, type: 3}
+    panelBoxSprite: {fileID: -200411419, guid: fd5fdd6ed8df8b044a74782ad55030a0, type: 3}
+    panelBoxWallSprite: {fileID: 21300000, guid: 683926a89000a6c40917d40b1707975f, type: 3}
   - color: 4
     catIconSprite: {fileID: 21300000, guid: a5969a3fa1c5f1949a1fabdfc9c861b2, type: 3}
-    panelBoxSprite: {fileID: 21300000, guid: 75a5dbcdcd6e6f84caf6959f39acc5a1, type: 3}
+    panelBoxSprite: {fileID: -976642638, guid: 75a5dbcdcd6e6f84caf6959f39acc5a1, type: 3}
+    panelBoxWallSprite: {fileID: 21300000, guid: 5d79a0097880edc4090a3a1d252131e4, type: 3}
   - color: 5
     catIconSprite: {fileID: 21300000, guid: 14e663edc3d357141b0be0aae2bbcaf2, type: 3}
-    panelBoxSprite: {fileID: 21300000, guid: f2d864cb164b1ee43bf7800fdc1f1d65, type: 3}
+    panelBoxSprite: {fileID: 1853913207, guid: f2d864cb164b1ee43bf7800fdc1f1d65, type: 3}
+    panelBoxWallSprite: {fileID: 21300000, guid: 2eab32c0fda763e4087778d9ccc68ef7, type: 3}
   - color: 6
     catIconSprite: {fileID: 21300000, guid: ae641e117155a9442b6f98b8424adf62, type: 3}
-    panelBoxSprite: {fileID: 21300000, guid: 7cd8867c2868e6247b98f131ed502473, type: 3}
+    panelBoxSprite: {fileID: -499242267, guid: 7cd8867c2868e6247b98f131ed502473, type: 3}
+    panelBoxWallSprite: {fileID: 21300000, guid: 963f2d1dafe882046bfdca65aa121db6, type: 3}
   - color: 7
     catIconSprite: {fileID: 21300000, guid: ce2ee14c50c11044e91ab1aef29aa392, type: 3}
-    panelBoxSprite: {fileID: 21300000, guid: 11361a3c04f60544287318e290ef3e03, type: 3}
+    panelBoxSprite: {fileID: -414600989, guid: 11361a3c04f60544287318e290ef3e03, type: 3}
+    panelBoxWallSprite: {fileID: 21300000, guid: bc826aeede095fe4cb59ecf5cc46cb7b, type: 3}
   - color: 8
     catIconSprite: {fileID: 21300000, guid: c2a0b2e659c8c734f86b6995b8d8b9f7, type: 3}
-    panelBoxSprite: {fileID: 21300000, guid: cae2f0ba33b901e4cb4d1e188c58c6d4, type: 3}
+    panelBoxSprite: {fileID: 11059330, guid: cae2f0ba33b901e4cb4d1e188c58c6d4, type: 3}
+    panelBoxWallSprite: {fileID: 21300000, guid: 9d869239f59268a4f85f59a420b831db, type: 3}
   - color: 9
     catIconSprite: {fileID: 21300000, guid: 7b1988e93e5774b46927f51b7f1be568, type: 3}
-    panelBoxSprite: {fileID: 21300000, guid: c0e20179196b6a24680f055153a849f4, type: 3}
+    panelBoxSprite: {fileID: 741547204, guid: c0e20179196b6a24680f055153a849f4, type: 3}
+    panelBoxWallSprite: {fileID: 21300000, guid: 46bdf01cff4ea1f40b35d990cb7fe9e4, type: 3}
   - color: 10
     catIconSprite: {fileID: 21300000, guid: 366e3e919e11f49448b82279177300c4, type: 3}
-    panelBoxSprite: {fileID: 21300000, guid: 157fd5543146a7445b0d5ebd4e894f25, type: 3}
+    panelBoxSprite: {fileID: -2024555208, guid: 157fd5543146a7445b0d5ebd4e894f25, type: 3}
+    panelBoxWallSprite: {fileID: 21300000, guid: ffaf84e7475308a4caf8a58e2d3d99ae, type: 3}
   - color: 11
     catIconSprite: {fileID: 21300000, guid: 6167c97678bb4b34a8b98bf355f03903, type: 3}
-    panelBoxSprite: {fileID: 21300000, guid: 71511279a84a78643989632a4cc5e8f3, type: 3}
+    panelBoxSprite: {fileID: 1222217539, guid: 71511279a84a78643989632a4cc5e8f3, type: 3}
+    panelBoxWallSprite: {fileID: 21300000, guid: 683926a89000a6c40917d40b1707975f, type: 3}
