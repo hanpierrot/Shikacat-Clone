@@ -10,25 +10,54 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ad69f86f48ce6c74faec251c4e8b8322, type: 3}
-  m_Name: GridConfig
+  m_Name: LevelTest2
   m_EditorClassIdentifier: 
-  rows: 5
-  columns: 5
+  rows: 8
+  columns: 8
   cellSize: 1
+  timeLimit: 40
   clues:
   - row: 0
-    col: 2
-    value: 5
-    color: 4
-  - row: 2
     col: 0
-    value: 8
-    color: 10
-  - row: 1
-    col: 3
-    value: 6
-    color: 2
-  - row: 4
+    value: 4
+    color: 0
+  - row: 0
     col: 4
+    value: 4
+    color: 1
+  - row: 1
+    col: 0
+    value: 4
+    color: 2
+  - row: 1
+    col: 2
+    value: 9
+    color: 3
+  - row: 1
+    col: 5
+    value: 6
+    color: 4
+  - row: 3
+    col: 0
+    value: 4
+    color: 5
+  - row: 3
+    col: 5
+    value: 6
+    color: 6
+  - row: 4
+    col: 2
+    value: 12
+    color: 7
+  - row: 5
+    col: 0
+    value: 6
+    color: 8
+  - row: 5
+    col: 5
     value: 6
     color: 9
+  - row: 7
+    col: 5
+    value: 3
+    color: 10

@@ -18,6 +18,7 @@ public class GridConfig : ScriptableObject
     [Min(1)] public int rows = 8;
     [Min(1)] public int columns = 8;
     public float cellSize = 1f;
+    public float timeLimit = 60f;
     
     public ClueEntry[] clues = Array.Empty<ClueEntry>();
 

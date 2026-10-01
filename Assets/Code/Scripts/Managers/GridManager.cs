@@ -5,10 +5,17 @@ using UnityEngine;
 
 public class GridManager : MonoSingleton<GridManager>
 {
+    [Header("Grid")]
     [SerializeField] private GridConfig config;
     [SerializeField] private Cell cellPrefab;
     [SerializeField] private Transform gridRoot;
-    [SerializeField] private Vector2 boardSize = new Vector2(8f, 8f);
+    
+    [Header("Responsive")]
+    [SerializeField] private Camera targetCamera;
+    [SerializeField, Range(0f, 1f)] private float boardWidthPercent = 0.9f;
+    [SerializeField, Range(0f, 1f)] private float boardHeightPercent = 0.7f;
+    
+    [Header("Layout")]
     [SerializeField] private Vector2 outerPadding = Vector2.zero;
     [SerializeField, Range(0f, 1f)] private float spacingRatio = 0.1f;
     [SerializeField] private CatPalette catPalette;
@@ -16,6 +23,8 @@ public class GridManager : MonoSingleton<GridManager>
     public event Action<Room> RoomRemoved;
     public event Action<Room> RoomCommitted;
     
+    private Vector2 boardSize;
+    private int cachedScreenWidth, cachedScreenHeight; 
     private Cell[,] cells;
     private float cellSize;
     private float step;
@@ -38,6 +47,12 @@ public class GridManager : MonoSingleton<GridManager>
         config = newConfig;
         for (int i = rooms.Count - 1; i >= 0; i--)
             RemoveRoom(rooms[i]);
+        
+        cachedScreenWidth = Screen.width;
+        cachedScreenHeight = Screen.height;
+        
+        Vector2 visibleSize = CameraViewport.GetVisibleWorldSize(targetCamera);
+        boardSize = new Vector2(visibleSize.x * boardWidthPercent, visibleSize.y * boardHeightPercent);
         
         float availableWidth = boardSize.x - 2f * outerPadding.x;
         float availableHeight = boardSize.y - 2f * outerPadding.y;
