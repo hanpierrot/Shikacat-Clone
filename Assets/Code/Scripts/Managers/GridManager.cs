@@ -67,12 +67,12 @@ public class GridManager : MonoSingleton<GridManager>
                 cell.transform.localScale = Vector3.one * cellSize;
                 cell.gameObject.SetActive(true);
                 
-                bool hasClue = config.TryGetClue(r, c, out int value, out CatColor color);
+                bool hasClue = config.TryGetClue(r, c, out LevelData.ClueEntry clue);
                 Sprite catSprite = null;
-                if (hasClue && catPalette != null && catPalette.TryGet(color, out var entry))
+                if (hasClue && catPalette != null && catPalette.TryGet(clue.color, out var entry))
                     catSprite = entry.catIconSprite;
                 
-                cell.Init(r, c, hasClue ? value : 0, color, catSprite);
+                cell.Init(r, c, hasClue, clue, catSprite);
                 cells[r, c] = cell;
                 index++;
             }
@@ -199,4 +199,7 @@ public class GridManager : MonoSingleton<GridManager>
 
         return false;
     }
+    
+    public RoomCheckResult CheckRoom(int minRow, int maxRow, int minCol, int maxCol, out LevelData.ClueEntry clue)
+        => RoomRules.Check(config, rooms, minRow, maxRow, minCol, maxCol, out clue);
 }
