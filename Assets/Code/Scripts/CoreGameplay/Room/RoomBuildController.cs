@@ -16,12 +16,14 @@ public class RoomBuildController : MonoBehaviour
     [SerializeField] private RoomVisual roomPanelPrefab;
     [SerializeField] private Transform roomVisualRoot;
     [SerializeField] private CatPalette catPalette;
+    [SerializeField] private float referenceCellSize = 1f;
     
     private readonly List<RoomVisual> roomPanelPool = new List<RoomVisual>();
 
     private int startRow, startCol;
     private int currentMinRow, currentMaxRow, currentMinCol, currentMaxCol;
     private bool isPressValid;
+    private bool isResolving;
 
     private void Awake()
     {
@@ -50,11 +52,14 @@ public class RoomBuildController : MonoBehaviour
         inputHandler.PressStarted -= HandlePressStarted;
         inputHandler.PressMoved -= HandlePressMoved;
         inputHandler.PressEnded -= HandlePressEnded;
-        GridManager.Instance.RoomRemoved -= ReleaseRoomPanel;
+        if (GridManager.Instance != null)
+            GridManager.Instance.RoomRemoved -= ReleaseRoomPanel;
     }
 
     private void HandlePressStarted(Vector2 screenPosition)
     {
+        if (isResolving) return;
+        
         Vector3 world = targetCamera.ScreenToWorldPoint(screenPosition);
         isPressValid = GridManager.Instance.WorldToGrid(world, out startRow, out startCol);
         if (!isPressValid) return;
@@ -64,7 +69,7 @@ public class RoomBuildController : MonoBehaviour
     
     private void HandlePressMoved(Vector2 screenPosition)
     {
-        if (!isPressValid) return;
+        if (!isPressValid || isResolving) return;
 
         Vector3 world = targetCamera.ScreenToWorldPoint(screenPosition);
         if (!GridManager.Instance.WorldToGrid(world, out int row, out int col)) return;
@@ -76,12 +81,13 @@ public class RoomBuildController : MonoBehaviour
 
     private void HandlePressEnded(Vector2 screenPosition, bool wasDrag)
     {
-        if (!isPressValid) return;
+        if (!isPressValid || isResolving) return;
         
         bool isValid = TryValidateSelection(out _);
         if (!isValid)
         {
             UpdatePreviewOverlay(invalidPreviewSprite);
+            isResolving = true;
             StartCoroutine(ResolveAfterDelay(wasDrag));
             return;
         }
@@ -95,6 +101,7 @@ public class RoomBuildController : MonoBehaviour
         yield return new WaitForSeconds(0.25f);
         if (dragPreviewOverlay != null) dragPreviewOverlay.gameObject.SetActive(false);
         ResolvePressEnd(wasDrag);
+        isResolving = false;
     }
     
     private void ResolvePressEnd(bool wasDrag)
@@ -120,6 +127,12 @@ public class RoomBuildController : MonoBehaviour
 
     private void SetPreviewBounds(int minRow, int maxRow, int minCol, int maxCol)
     {
+        if (GridManager.Instance.ContainsHole(minRow, maxRow, minCol, maxCol))
+        {
+            minRow = maxRow = startRow;
+            minCol = maxCol = startCol;
+        }
+        
         currentMinRow = minRow;
         currentMaxRow = maxRow;
         currentMinCol = minCol;
@@ -133,8 +146,11 @@ public class RoomBuildController : MonoBehaviour
         if (dragPreviewOverlay == null) return;
         
         GridManager.Instance.GetWorldRect(currentMinRow, currentMaxRow, currentMinCol, currentMaxCol, out Vector3 center, out Vector2 size);
+        
+        float scaleFactor = GridManager.Instance.CellSize / referenceCellSize;
         dragPreviewOverlay.transform.position = center;
-        dragPreviewOverlay.size = size;
+        dragPreviewOverlay.transform.localScale = Vector3.one * scaleFactor;
+        dragPreviewOverlay.size = size / scaleFactor;
         dragPreviewOverlay.sprite = overlaySprite;
         dragPreviewOverlay.gameObject.SetActive(true);
     }
@@ -146,7 +162,9 @@ public class RoomBuildController : MonoBehaviour
         
         RoomVisual panel = GetPooledPanel();
         GridManager.Instance.GetWorldRect(room.MinRow, room.MaxRow, room.MinColumn, room.MaxColumn, out Vector3 center, out Vector2 size);
-        panel.SetUp(center, size, entry.panelBoxSprite, entry.panelBoxWallSprite);
+        
+        float scaleFactor = GridManager.Instance.CellSize / referenceCellSize;
+        panel.SetUp(center, size, entry.panelBoxSprite, entry.panelBoxWallSprite, scaleFactor);
         panel.gameObject.SetActive(true);
         room.Visual = panel;
     }
@@ -183,7 +201,7 @@ public class RoomBuildController : MonoBehaviour
         int height = currentMaxRow - currentMinRow + 1;
         int area = width * height;
         
-        if (!GridManager.Instance.IsAreaFree(currentMinRow, currentMaxRow, currentMinCol, currentMaxCol))
+        if (GridManager.Instance.HasRoomWithBounds(currentMinRow, currentMaxRow, currentMinCol, currentMaxCol))
             return false;
 
         int clueCount = 0;
@@ -192,7 +210,8 @@ public class RoomBuildController : MonoBehaviour
             for (int c = currentMinCol; c <= currentMaxCol; c++)
             {
                 Cell cell = GridManager.Instance.GetCell(r, c);
-                if (cell == null || !cell.HasClue) continue;
+                if(cell == null) return false;
+                if (!cell.HasClue) continue;
                 
                 clueCount++;
                 if(clueCount > 1) return false;

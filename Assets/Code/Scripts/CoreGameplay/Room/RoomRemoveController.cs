@@ -4,12 +4,8 @@ using UnityEngine;
 
 public class RoomRemoveController : MonoBehaviour
 {
-    private bool canRemoveRoomOnClick = true;
-
     public bool TryRemoveAt(int row, int col)
     {
-        if (!canRemoveRoomOnClick) return false;
-
         Cell cell = GridManager.Instance.GetCell(row, col);
         if (cell == null || cell.AssignedRoom == null) return false;
 

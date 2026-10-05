@@ -43,7 +43,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 1
+  spriteMode: 2
   spriteExtrude: 1
   spriteMeshType: 0
   alignment: 9
@@ -108,7 +108,28 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
-    sprites: []
+    sprites:
+    - serializedVersion: 2
+      name: Panel_HUD_BG_Bottom_0
+      rect:
+        serializedVersion: 2
+        x: 30
+        y: 0
+        width: 1080
+        height: 481
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 18}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 59154ab83f6141840bb5a4134fbb9658
+      internalID: -426931274
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     physicsShape: []
     bones: []
@@ -119,7 +140,16 @@ TextureImporter:
     edges: []
     weights: []
     secondaryTextures: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      Panel_HUD_BG_Bottom_0: -426931274
+      Panel_HUD_BG_Bottom_1: -1904049911
+      Panel_HUD_BG_Bottom_2: -831226893
+      Panel_HUD_BG_Bottom_3: -2064731857
+      Panel_HUD_BG_Bottom_4: 1799103204
+      Panel_HUD_BG_Bottom_5: 67927939
+      Panel_HUD_BG_Bottom_6: 1558054035
+      Panel_HUD_BG_Bottom_7: -548517887
+      Panel_HUD_BG_Bottom_8: 1396595355
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

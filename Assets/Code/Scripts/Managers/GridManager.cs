@@ -5,39 +5,43 @@ using UnityEngine;
 
 public class GridManager : MonoSingleton<GridManager>
 {
-    [SerializeField] private GridConfig config;
+    [Header("Grid")]
     [SerializeField] private Cell cellPrefab;
     [SerializeField] private Transform gridRoot;
-    [SerializeField] private Vector2 boardSize = new Vector2(8f, 8f);
+    
+    [Header("Responsive")]
+    [SerializeField] private Camera targetCamera;
+    [SerializeField, Range(0f, 1f)] private float boardWidthPercent = 0.9f;
+    [SerializeField, Range(0f, 1f)] private float boardHeightPercent = 0.7f;
+    
+    [Header("Layout")]
     [SerializeField] private Vector2 outerPadding = Vector2.zero;
     [SerializeField, Range(0f, 1f)] private float spacingRatio = 0.1f;
     [SerializeField] private CatPalette catPalette;
 
     public event Action<Room> RoomRemoved;
     public event Action<Room> RoomCommitted;
-    
+
+    private LevelData config;
+    private Vector2 boardSize;
     private Cell[,] cells;
     private float cellSize;
     private float step;
     private readonly List<Room> rooms = new List<Room>();
     private readonly List<Cell> cellPool = new List<Cell>();
-
-    public int Rows => config.rows;
-    public int Columns => config.columns;
+    
     public float CellSize => cellSize;
-    public IReadOnlyList<Room> Rooms => rooms;
+    public bool IsReplacingRooms { get; private set; }
 
-    protected override void Awake()
+    public void BuildGrid(LevelData newLevel)
     {
-        base.Awake();
-        BuildGrid(config);
-    }
-
-    public void BuildGrid(GridConfig newConfig)
-    {
-        config = newConfig;
-        for (int i = rooms.Count - 1; i >= 0; i--)
+        for(int i = rooms.Count - 1; i >=0; i--)
             RemoveRoom(rooms[i]);
+        
+        config = newLevel;
+        
+        Vector2 visibleSize = CameraViewport.GetVisibleWorldSize(targetCamera);
+        boardSize = new Vector2(visibleSize.x * boardWidthPercent, visibleSize.y * boardHeightPercent);
         
         float availableWidth = boardSize.x - 2f * outerPadding.x;
         float availableHeight = boardSize.y - 2f * outerPadding.y;
@@ -48,8 +52,7 @@ public class GridManager : MonoSingleton<GridManager>
         cellSize = Mathf.Min(cellSizeX, cellSizeY);
         step = cellSize * (1f + spacingRatio);
         
-        int needed = config.rows * config.columns;
-        EnsurePoolSize(needed);
+        EnsurePoolSize(config.ActiveCellCount);
         
         cells = new Cell[config.rows, config.columns];
         int index = 0;
@@ -57,6 +60,8 @@ public class GridManager : MonoSingleton<GridManager>
         {
             for (int c = 0; c < config.columns; c++)
             {
+                if (config.IsHole(r, c)) continue;
+                
                 Cell cell = cellPool[index];
                 cell.transform.position = GridToWorld(r, c);
                 cell.transform.localScale = Vector3.one * cellSize;
@@ -122,7 +127,10 @@ public class GridManager : MonoSingleton<GridManager>
         Vector3 local = worldPos - gridRoot.position;
         c = Mathf.RoundToInt((local.x + halfWidth) / step);
         r = Mathf.RoundToInt((halfHeight - local.y) / step);
-        return r >= 0 && r < config.rows && c >= 0 && c < config.columns;
+        
+        if(r < 0 || r >= config.rows || c < 0 || c >= config.columns) return false;
+        
+        return !config.IsHole(r, c);
     }
 
     public Cell GetCell(int r, int c)
@@ -131,18 +139,24 @@ public class GridManager : MonoSingleton<GridManager>
         return cells[r, c];
     }
 
-    public bool IsAreaFree(int minRow, int maxRow, int minCol, int maxCol, Room ignoreRoom = null)
+    public bool HasRoomWithBounds(int minRow, int maxRow, int minCol, int maxCol)
     {
-        foreach (Room room in rooms)
-        {
-            if (room == ignoreRoom) continue;
-            if (room.Overlaps(minRow, maxRow, minCol, maxCol)) return false;
-        }
-        return true;
+        foreach (var room in rooms)
+            if (room.MinRow == minRow && room.MaxRow == maxRow
+                                      && room.MinColumn == minCol && room.MaxColumn == maxCol)
+                return true;
+        
+        return false;
     }
 
     public Room CommitRoom(int minRow, int maxRow, int minCol, int maxCol, Cell clueCell)
     {
+        IsReplacingRooms = true;
+        for(int i = rooms.Count - 1; i >= 0; i--)
+            if(rooms[i].Overlaps(minRow, maxRow, minCol, maxCol))
+                RemoveRoom(rooms[i]);
+        IsReplacingRooms = false;
+        
         var room = new Room(minRow, maxRow, minCol, maxCol, clueCell);
         rooms.Add(room);
         
@@ -164,13 +178,25 @@ public class GridManager : MonoSingleton<GridManager>
         rooms.Remove(room);
         RoomRemoved?.Invoke(room);
     }
-    
+
     public bool IsGridFull()
     {
         for (int r = 0; r < config.rows; r++)
             for (int c = 0; c < config.columns; c++)
-                if (GetCell(r, c)?.AssignedRoom == null) return false;
+            {
+                Cell cell = GetCell(r, c);
+                if (cell != null && cell.AssignedRoom == null) return false;
+            }
 
         return true;
+    }
+
+    public bool ContainsHole(int minRow, int maxRow, int minCol, int maxCol)
+    {
+        for (int r = minRow; r <= maxRow; r++)
+            for (int c = minCol; c <= maxCol; c++)
+                if (config.IsHole(r, c)) return true;
+
+        return false;
     }
 }

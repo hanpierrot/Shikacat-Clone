@@ -10,10 +10,6 @@ public class Room
     public int MaxColumn { get; }
     public Cell ClueCell { get; }
     public RoomVisual Visual { get; set; }
-
-    public int Width => MaxColumn - MinColumn + 1;
-    public int Height => MaxRow - MinRow + 1;
-    public int Area => Width * Height;
     
     public Room(int minRow, int maxRow, int minColumn, int maxColumn, Cell clueCell)
     {
@@ -22,11 +18,6 @@ public class Room
         MinColumn = minColumn;
         MaxColumn = maxColumn;
         ClueCell = clueCell;
-    }
-
-    public bool Contains(int row, int column)
-    {
-        return row >= MinRow && row <= MaxRow && column >= MinColumn && column <= MaxColumn;
     }
 
     public bool Overlaps(int minRow, int maxRow, int minColumn, int maxColumn)
