@@ -7,8 +7,11 @@ using UnityEngine.UI;
 
 public class GameManager : MonoSingleton<GameManager>
 {
-    [SerializeField] private GridConfig[] levels;
+    [SerializeField] private TextAsset levelsJson;
+    
+    [Header("HUD")]
     [SerializeField] private TMP_Text timerText;
+    [SerializeField] private TMP_Text moveLimitText;
     
     [Header("Game Over Panel")]
     [SerializeField] private GameObject gameOverPanel;
@@ -18,29 +21,36 @@ public class GameManager : MonoSingleton<GameManager>
     [SerializeField] private Button nextLevelButton;
     [SerializeField] private Button restartButton;
     
-    private int currentLevelIndex = 0;
+    private LevelData[] levels;
+    private LevelData currentLevel;
+    private int currentLevelIndex;
     private float timeRemaining;
+    private int movesRemaining;
     private bool isGameOver;
+    private bool isLoading;
     
     private void OnEnable()
     {
         GridManager.Instance.RoomCommitted += HandleRoomCommitted;
+        GridManager.Instance.RoomRemoved += HandleRoomRemoved;
     }
 
     private void OnDisable()
     {
-        if (GridManager.Instance != null)
-            GridManager.Instance.RoomCommitted -= HandleRoomCommitted;
+        if (GridManager.Instance == null) return;
+        GridManager.Instance.RoomCommitted -= HandleRoomCommitted;
+        GridManager.Instance.RoomRemoved -= HandleRoomRemoved;
     }
 
     private void Start()
     {
+        levels = LevelLoader.Load(levelsJson);
         LoadLevel(0);
     }
 
     private void Update()
     {
-        if (isGameOver) return;
+        if (isGameOver || currentLevel == null || !currentLevel.HasTimeLimit) return;
         
         timeRemaining -= Time.deltaTime;
         if (timeRemaining <= 0)
@@ -59,17 +69,25 @@ public class GameManager : MonoSingleton<GameManager>
         if (levels == null || levels.Length == 0) return;
         
         currentLevelIndex = Mathf.Clamp(index, 0, levels.Length - 1);
-        GridConfig level = levels[currentLevelIndex];
+        currentLevel = levels[currentLevelIndex];
 
         isGameOver = false;
-        timeRemaining = level.timeLimit;
+        timeRemaining = currentLevel.timeLimit;
+        movesRemaining = currentLevel.moveLimit;
 
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
         if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(false);
         if (restartButton != null) restartButton.gameObject.SetActive(false);
 
-        GridManager.Instance.BuildGrid(level);
+        isLoading = true;
+        GridManager.Instance.BuildGrid(currentLevel);
+        isLoading = false; 
+        
+        if (timerText != null) timerText.gameObject.SetActive(currentLevel.HasTimeLimit);
+        if (moveLimitText != null) moveLimitText.gameObject.SetActive(currentLevel.HasMoveLimit);
+        
         UpdateTimerText();
+        UpdateMoveText();
     }
     
     private void UpdateTimerText()
@@ -81,19 +99,55 @@ public class GameManager : MonoSingleton<GameManager>
         int seconds = totalSeconds % 60;
         timerText.text = $"{minutes:00}:{seconds:00}";
     }
+    
+    private void UpdateMoveText()
+    {
+        if (moveLimitText == null) return;
+        moveLimitText.text = movesRemaining.ToString();
+    }
 
     private void HandleRoomCommitted(Room room)
     {
-        if (isGameOver) return;
+        if (isLoading || isGameOver) return;
+        
+        ConsumeMove();
+        
         if (GridManager.Instance.IsGridFull())
+        {
             HandleWin();
+            return;
+        }
+
+        CheckMoveLimitLose();
+    }
+    
+    private void HandleRoomRemoved(Room room)
+    {
+        if (isLoading || isGameOver || GridManager.Instance.IsReplacingRooms) return;
+
+        ConsumeMove();
+        CheckMoveLimitLose();
+    }
+
+    private void ConsumeMove()
+    {
+        if (!currentLevel.HasMoveLimit) return;
+
+        movesRemaining--;
+        UpdateMoveText();
+    }
+
+    private void CheckMoveLimitLose()
+    {
+        if (currentLevel.HasMoveLimit && movesRemaining <= 0)
+            HandleLose();
     }
 
     private void HandleWin()
     {
         if (isGameOver) return;
         isGameOver = true;
-        if (gameOverImage != null)
+        if (gameOverImage != null && gameOverPanel != null && nextLevelButton != null)
         {
             gameOverImage.sprite = winSprite;
             gameOverPanel.SetActive(true);
@@ -103,8 +157,9 @@ public class GameManager : MonoSingleton<GameManager>
 
     private void HandleLose()
     {
+        if (isGameOver) return;
         isGameOver = true;
-        if (gameOverImage != null)
+        if (gameOverImage != null && gameOverPanel != null && restartButton != null)
         {
             gameOverImage.sprite = loseSprite;
             gameOverPanel.SetActive(true);

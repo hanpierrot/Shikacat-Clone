@@ -127,6 +127,12 @@ public class RoomBuildController : MonoBehaviour
 
     private void SetPreviewBounds(int minRow, int maxRow, int minCol, int maxCol)
     {
+        if (GridManager.Instance.ContainsHole(minRow, maxRow, minCol, maxCol))
+        {
+            minRow = maxRow = startRow;
+            minCol = maxCol = startCol;
+        }
+        
         currentMinRow = minRow;
         currentMaxRow = maxRow;
         currentMinCol = minCol;
@@ -144,7 +150,7 @@ public class RoomBuildController : MonoBehaviour
         float scaleFactor = GridManager.Instance.CellSize / referenceCellSize;
         dragPreviewOverlay.transform.position = center;
         dragPreviewOverlay.transform.localScale = Vector3.one * scaleFactor;
-        dragPreviewOverlay.size = size / scaleFactor;;
+        dragPreviewOverlay.size = size / scaleFactor;
         dragPreviewOverlay.sprite = overlaySprite;
         dragPreviewOverlay.gameObject.SetActive(true);
     }
@@ -195,7 +201,7 @@ public class RoomBuildController : MonoBehaviour
         int height = currentMaxRow - currentMinRow + 1;
         int area = width * height;
         
-        if (!GridManager.Instance.IsAreaFree(currentMinRow, currentMaxRow, currentMinCol, currentMaxCol))
+        if (GridManager.Instance.HasRoomWithBounds(currentMinRow, currentMaxRow, currentMinCol, currentMaxCol))
             return false;
 
         int clueCount = 0;
@@ -204,7 +210,8 @@ public class RoomBuildController : MonoBehaviour
             for (int c = currentMinCol; c <= currentMaxCol; c++)
             {
                 Cell cell = GridManager.Instance.GetCell(r, c);
-                if (cell == null || !cell.HasClue) continue;
+                if(cell == null) return false;
+                if (!cell.HasClue) continue;
                 
                 clueCount++;
                 if(clueCount > 1) return false;
