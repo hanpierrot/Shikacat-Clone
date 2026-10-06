@@ -13,6 +13,8 @@ public class LevelData
         public int col;
         public int value;
         public CatColor color;
+        public ClueType type;
+        public int unlockRoomCount;
     }
 
     [Serializable]
@@ -73,18 +75,16 @@ public class LevelData
     
     public bool IsHole(int row, int col) => holeMask[row, col];
 
-    public bool TryGetClue(int row, int col, out int value, out CatColor color)
+    public bool TryGetClue(int row, int col, out ClueEntry clue)
     {
         int index = clueIndexMap[row, col];
         if (index >= 0)
         {
-            value = clues[index].value;
-            color = clues[index].color;
+            clue = clues[index];
             return true;
         }
         
-        value = 0;
-        color = default;
+        clue = default;
         return false;
     }
     
@@ -107,7 +107,23 @@ public class LevelData
             if (holeMask[clue.row, clue.col]) { error = $"clue ({clue.row},{clue.col}) nằm trên ô tắt"; return false; }
             if (seen[clue.row, clue.col]) { error = $"clue ({clue.row},{clue.col}) bị trùng vị trí"; return false; }
             if (clue.value < 1) { error = $"clue ({clue.row},{clue.col}) có value < 1"; return false; }
+            if (!Enum.IsDefined(typeof(ClueType), clue.type)) { error = $"Không tồn tại TypeClue ({(int)clue.type}) tại ({clue.row},{clue.col}) "; return false; }
+            if (clue.type == ClueType.Locked && (clue.unlockRoomCount < 1 || clue.unlockRoomCount > clues.Length - 1))
+            {
+                error = $"clue ({clue.row},{clue.col}) kiểu Locked cần 1 <= unlockRoomCount <= {clues.Length - 1}";
+                return false;
+            }
 
+            if (clue.type == ClueType.Square)
+            {
+                int side = Mathf.RoundToInt(Mathf.Sqrt(clue.value));
+                if (side * side != clue.value)
+                {
+                    error = $"clue ({clue.row},{clue.col}) kiểu Square cần value là số chính phương (hiện {clue.value})";
+                    return false;
+                }
+            }
+            
             seen[clue.row, clue.col] = true;
             clueAreaSum += clue.value;
         }

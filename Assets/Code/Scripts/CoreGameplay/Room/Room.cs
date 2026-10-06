@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Room
+public class Room : IRoomBounds
 {
     public int MinRow { get; }
     public int MaxRow { get; }

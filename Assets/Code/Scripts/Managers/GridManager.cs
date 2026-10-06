@@ -17,7 +17,7 @@ public class GridManager : MonoSingleton<GridManager>
     [Header("Layout")]
     [SerializeField] private Vector2 outerPadding = Vector2.zero;
     [SerializeField, Range(0f, 1f)] private float spacingRatio = 0.1f;
-    [SerializeField] private CatPalette catPalette;
+    [SerializeField] private ClueTypeIcons clueTypeIcons;
 
     public event Action<Room> RoomRemoved;
     public event Action<Room> RoomCommitted;
@@ -33,6 +33,9 @@ public class GridManager : MonoSingleton<GridManager>
     public float CellSize => cellSize;
     public bool IsReplacingRooms { get; private set; }
 
+    public RoomCheckResult CheckRoom(int minRow, int maxRow, int minCol, int maxCol, out LevelData.ClueEntry clue)
+        => RoomRules.Check(config, rooms, minRow, maxRow, minCol, maxCol, out clue);
+    
     public void BuildGrid(LevelData newLevel)
     {
         for(int i = rooms.Count - 1; i >=0; i--)
@@ -67,12 +70,10 @@ public class GridManager : MonoSingleton<GridManager>
                 cell.transform.localScale = Vector3.one * cellSize;
                 cell.gameObject.SetActive(true);
                 
-                bool hasClue = config.TryGetClue(r, c, out int value, out CatColor color);
-                Sprite catSprite = null;
-                if (hasClue && catPalette != null && catPalette.TryGet(color, out var entry))
-                    catSprite = entry.catIconSprite;
+                bool hasClue = config.TryGetClue(r, c, out LevelData.ClueEntry clue);
+                Sprite typeIcon = hasClue && clueTypeIcons != null ? clueTypeIcons.Get(clue.type) : null;
                 
-                cell.Init(r, c, hasClue ? value : 0, color, catSprite);
+                cell.Init(r, c, hasClue, clue, typeIcon);
                 cells[r, c] = cell;
                 index++;
             }
@@ -139,16 +140,6 @@ public class GridManager : MonoSingleton<GridManager>
         return cells[r, c];
     }
 
-    public bool HasRoomWithBounds(int minRow, int maxRow, int minCol, int maxCol)
-    {
-        foreach (var room in rooms)
-            if (room.MinRow == minRow && room.MaxRow == maxRow
-                                      && room.MinColumn == minCol && room.MaxColumn == maxCol)
-                return true;
-        
-        return false;
-    }
-
     public Room CommitRoom(int minRow, int maxRow, int minCol, int maxCol, Cell clueCell)
     {
         IsReplacingRooms = true;
@@ -164,6 +155,7 @@ public class GridManager : MonoSingleton<GridManager>
             for (int c = minCol; c <= maxCol; c++)
                 GetCell(r, c)?.SetAssignedRoom(room);
         
+        RefreshLocks();
         RoomCommitted?.Invoke(room);
         return room;
     }
@@ -176,6 +168,7 @@ public class GridManager : MonoSingleton<GridManager>
                 GetCell(r, c)?.SetAssignedRoom(null);
         
         rooms.Remove(room);
+        if (!IsReplacingRooms) RefreshLocks();
         RoomRemoved?.Invoke(room);
     }
 
@@ -199,4 +192,14 @@ public class GridManager : MonoSingleton<GridManager>
 
         return false;
     }
+
+    private void RefreshLocks()
+    {
+        if(cells == null) return;
+        
+        foreach (var cell in cells)
+            cell?.RefreshLock(rooms.Count);
+    }
+    
+    public bool AreAllRoomsCorrect() => RoomRules.AllRoomsCorrect(config, rooms);
 }

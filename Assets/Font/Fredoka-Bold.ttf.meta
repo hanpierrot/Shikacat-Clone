@@ -1,25 +1,21 @@
 fileFormatVersion: 2
-guid: 0ce2382974d99154e960390181c3140c
-timeCreated: 1790567449
-licenseType: Free
+guid: b79d84c1ae52f354c880f0468b3f5e9a
 TrueTypeFontImporter:
-  serializedVersion: 4
   externalObjects: {}
+  serializedVersion: 4
   fontSize: 16
   forceTextureCase: -2
   characterSpacing: 0
   characterPadding: 1
   includeFontData: 1
   fontNames:
-  - Liberation Sans
+  - Fredoka
   fallbackFontReferences: []
-  customCharacters:
+  customCharacters: 
   fontRenderingMode: 0
-  output:
-    hasEmptyFontData: 0
   ascentCalculationMode: 1
   useLegacyBoundsCalculation: 0
   shouldRoundAdvanceValue: 1
-  userData:
-  assetBundleName:
-  assetBundleVariant:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

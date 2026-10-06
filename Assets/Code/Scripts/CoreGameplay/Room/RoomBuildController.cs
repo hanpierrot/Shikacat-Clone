@@ -197,28 +197,11 @@ public class RoomBuildController : MonoBehaviour
     private bool TryValidateSelection(out Cell clueCell)
     {
         clueCell = null;
-        int width = currentMaxCol - currentMinCol + 1;
-        int height = currentMaxRow - currentMinRow + 1;
-        int area = width * height;
-        
-        if (GridManager.Instance.HasRoomWithBounds(currentMinRow, currentMaxRow, currentMinCol, currentMaxCol))
-            return false;
+        RoomCheckResult result = GridManager.Instance.CheckRoom(
+            currentMinRow, currentMaxRow, currentMinCol, currentMaxCol, out LevelData.ClueEntry clue);
+        if (result != RoomCheckResult.Valid) return false;
 
-        int clueCount = 0;
-        for (int r = currentMinRow; r <= currentMaxRow; r++)
-        {
-            for (int c = currentMinCol; c <= currentMaxCol; c++)
-            {
-                Cell cell = GridManager.Instance.GetCell(r, c);
-                if(cell == null) return false;
-                if (!cell.HasClue) continue;
-                
-                clueCount++;
-                if(clueCount > 1) return false;
-                clueCell = cell;
-            }
-        }
-        
-        return clueCount == 1 && clueCell.ClueValue == area;
+        clueCell = GridManager.Instance.GetCell(clue.row, clue.col);
+        return true;
     }
 }
