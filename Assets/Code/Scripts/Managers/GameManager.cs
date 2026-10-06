@@ -112,7 +112,7 @@ public class GameManager : MonoSingleton<GameManager>
         
         ConsumeMove();
         
-        if (GridManager.Instance.IsGridFull())
+        if (GridManager.Instance.IsGridFull() && GridManager.Instance.AreAllRoomsCorrect())
         {
             HandleWin();
             return;

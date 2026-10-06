@@ -124,6 +124,50 @@
         { "row": 5, "col": 5, "width": 3, "height": 2, "clueIndex": 9 },
         { "row": 7, "col": 5, "width": 3, "height": 1, "clueIndex": 10 }
       ]
+    },
+    {
+      "rows": 4, "columns": 4, "timeLimit": 60, "moveLimit": 0,
+      "clues": [
+        { "row": 0, "col": 1, "value": 4, "color": 0, "type": 2 },
+        { "row": 2, "col": 0, "value": 3, "color": 1, "type": 3 },
+        { "row": 2, "col": 2, "value": 9, "color": 2, "type": 5 }
+      ],
+      "holes": [],
+      "solution": [
+        { "row": 0, "col": 0, "width": 4, "height": 1, "clueIndex": 0 },
+        { "row": 1, "col": 0, "width": 1, "height": 3, "clueIndex": 1 },
+        { "row": 1, "col": 1, "width": 3, "height": 3, "clueIndex": 2 }
+      ]
+    },
+    {
+      "rows": 4, "columns": 4, "timeLimit": 60, "moveLimit": 0,
+      "clues": [
+        { "row": 0, "col": 0, "value": 8, "color": 0, "type": 4 },
+        { "row": 2, "col": 0, "value": 4, "color": 1 },
+        { "row": 3, "col": 3, "value": 4, "color": 2 }
+      ],
+      "holes": [],
+      "solution": [
+        { "row": 0, "col": 0, "width": 4, "height": 2, "clueIndex": 0 },
+        { "row": 2, "col": 0, "width": 2, "height": 2, "clueIndex": 1 },
+        { "row": 2, "col": 2, "width": 2, "height": 2, "clueIndex": 2 }
+      ]
+    },
+    {
+      "rows": 4, "columns": 4, "timeLimit": 60, "moveLimit": 0,
+      "clues": [
+        { "row": 0, "col": 0, "value": 4, "color": 0 },
+        { "row": 0, "col": 2, "value": 4, "color": 1 },
+        { "row": 2, "col": 0, "value": 4, "color": 2 },
+        { "row": 2, "col": 2, "value": 4, "color": 3, "type": 1, "unlockRoomCount": 3 }
+      ],
+      "holes": [],
+      "solution": [
+        { "row": 0, "col": 0, "width": 2, "height": 2, "clueIndex": 0 },
+        { "row": 0, "col": 2, "width": 2, "height": 2, "clueIndex": 1 },
+        { "row": 2, "col": 0, "width": 2, "height": 2, "clueIndex": 2 },
+        { "row": 2, "col": 2, "width": 2, "height": 2, "clueIndex": 3 }
+      ]
     }
   ]
 }

@@ -498,7 +498,7 @@ MonoBehaviour:
   boardHeightPercent: 0.7
   outerPadding: {x: 0, y: 0}
   spacingRatio: 0
-  catPalette: {fileID: 11400000, guid: 2a3cac25d90e63d4b946e781561e77fa, type: 2}
+  clueTypeIcons: {fileID: 0}
 --- !u!4 &164349589
 Transform:
   m_ObjectHideFlags: 0
@@ -3889,7 +3889,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!212 &1357249995
 SpriteRenderer:
   m_ObjectHideFlags: 0
