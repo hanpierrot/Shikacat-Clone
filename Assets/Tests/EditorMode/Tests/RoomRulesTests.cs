@@ -1,7 +1,5 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using NUnit.Framework;
 
 public class RoomRulesTests
@@ -19,8 +17,13 @@ public class RoomRulesTests
         }
     }
     
+    private static readonly IRoomBounds[] NoRooms = Array.Empty<IRoomBounds>();
+    
     private static LevelData.ClueEntry Clue(int row, int col, int value, ClueType type = ClueType.Normal, int unlock = 0)
         => new LevelData.ClueEntry { row = row, col = col, value = value, type = type, unlockRoomCount = unlock };
+    
+    private static LevelData.SolutionRoom Sol(int row, int col, int width, int height, int clueIndex)
+        => new LevelData.SolutionRoom { row = row, col = col, width = width, height = height, clueIndex = clueIndex };
 
     private static LevelData MakeLevel(int rows, int cols, LevelData.ClueEntry[] clues,
         LevelData.CellCoord[] holes = null)
@@ -36,8 +39,13 @@ public class RoomRulesTests
         level.Prepare();
         return level;
     }
-
-    private static readonly IRoomBounds[] NoRooms = Array.Empty<IRoomBounds>();
+    
+    private static LevelData TwoRowLevel()
+    {
+        var level = MakeLevel(2, 2, new[] { Clue(0, 0, 2), Clue(1, 0, 2) });
+        level.moveLimit = 4;
+        return level;
+    }
 
     [Test]
     public void Valid_WhenOneClueAndAreaMatches()
@@ -219,5 +227,61 @@ public class RoomRulesTests
         Assert.IsFalse(RoomRules.IsLocked(ClueType.Locked, 3, false, 3));    // x = 0 thì mở
         Assert.IsFalse(RoomRules.IsLocked(ClueType.Locked, 3, true, 0));     // đã nằm trong phòng thì giữ mở
         Assert.IsFalse(RoomRules.IsLocked(ClueType.Normal, 3, false, 0));
+    }
+    
+    [Test]
+    public void LevelCollection_RoundTripsThroughJson()
+    {
+        LevelData level = MakeLevel(4, 4, new[] { Clue(0, 0, 16, ClueType.Hidden) });
+        level.moveLimit = 5;
+        var original = new LevelCollection { version = 1, levels = new[] { level } };
+
+        LevelCollection parsed = LevelLoader.Parse(LevelLoader.ToJson(original));
+
+        Assert.AreEqual(1, parsed.levels.Length);
+        Assert.AreEqual(ClueType.Hidden, parsed.levels[0].clues[0].type);
+        Assert.AreEqual(5, parsed.levels[0].moveLimit);
+        Assert.AreEqual(16, parsed.levels[0].ActiveCellCount);
+    }
+    
+    [Test]
+    public void TryParse_ReturnsFalseOnBrokenJson()
+    {
+        Assert.IsFalse(LevelLoader.TryParse("{ not valid json", out LevelCollection collection, out string error));
+        Assert.IsNull(collection);
+        Assert.IsNotNull(error);
+    }
+
+    [Test]
+    public void Validate_RejectsUndefinedColor()
+    {
+        var clue = Clue(0, 0, 4);
+        clue.color = (CatColor)999;
+        var level = MakeLevel(2, 2, new[] { clue });
+        Assert.IsFalse(level.Validate(out _));
+    }
+    
+    [Test]
+    public void Validate_AcceptsCorrectSolution()
+    {
+        var level = TwoRowLevel();
+        level.solution = new[] { Sol(0, 0, 2, 1, 0), Sol(1, 0, 2, 1, 1) };
+        Assert.IsTrue(level.Validate(out _));
+    }
+
+    [Test]
+    public void Validate_RejectsOverlappingSolution()
+    {
+        var level = TwoRowLevel();
+        level.solution = new[] { Sol(0, 0, 2, 1, 0), Sol(0, 0, 2, 1, 1) };
+        Assert.IsFalse(level.Validate(out _));
+    }
+
+    [Test]
+    public void Validate_RejectsSolutionWithWrongArea()
+    {
+        var level = TwoRowLevel();
+        level.solution = new[] { Sol(0, 0, 1, 1, 0), Sol(1, 0, 2, 1, 1) };
+        Assert.IsFalse(level.Validate(out _));
     }
 }

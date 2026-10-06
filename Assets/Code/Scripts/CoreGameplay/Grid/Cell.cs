@@ -1,10 +1,7 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class Cell : MonoBehaviour
 {
-    [SerializeField] private SpriteRenderer background;
     [SerializeField] private SpriteRenderer clueTypeIcon;
     [SerializeField] private SpriteRenderer lockIcon;
     [SerializeField] private TMPro.TextMeshPro valueLabel;
@@ -14,19 +11,14 @@ public class Cell : MonoBehaviour
     public ClueType ClueType { get; private set; }
     public bool HasClue => ClueValue > 0;
     public Room AssignedRoom { get; private set; }
-    public int UnlockRoomCount { get; private set; }
-    public bool IsLocked { get; private set; }
-    public int Row { get; private set; }
-    public int Column { get; private set; }
+    private int unlockRoomCount;
 
-    public void Init(int row, int col, bool hasClue, LevelData.ClueEntry clue, Sprite typeIcon)
+    public void Init(bool hasClue, LevelData.ClueEntry clue, Sprite typeIcon)
     {
-        Row = row;
-        Column = col;
         ClueValue = hasClue ? clue.value : 0;
         ClueColor = hasClue ? clue.color : default;
         ClueType = hasClue ? clue.type : ClueType.Normal;
-        UnlockRoomCount = hasClue ? clue.unlockRoomCount : 0;
+        unlockRoomCount = hasClue ? clue.unlockRoomCount : 0;
         AssignedRoom = null;
         
         if(clueTypeIcon != null)
@@ -44,13 +36,13 @@ public class Cell : MonoBehaviour
 
     public void RefreshLock(int roomCount)
     {
-        IsLocked = HasClue && RoomRules.IsLocked(ClueType, UnlockRoomCount, AssignedRoom != null, roomCount);
-        
-        if (lockIcon != null) lockIcon.enabled = IsLocked;
+        bool isLocked = HasClue && RoomRules.IsLocked(ClueType, unlockRoomCount, AssignedRoom != null, roomCount);
+
+        if (lockIcon != null) lockIcon.enabled = isLocked;
 
         if (valueLabel == null || !HasClue) return;
 
-        if (IsLocked) valueLabel.text = (UnlockRoomCount - roomCount).ToString();
+        if (isLocked) valueLabel.text = (unlockRoomCount - roomCount).ToString();
         else valueLabel.text = ClueType == ClueType.Hidden ? "?" : ClueValue.ToString();
     }
 

@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -23,7 +22,6 @@ public class GridManager : MonoSingleton<GridManager>
     public event Action<Room> RoomCommitted;
 
     private LevelData config;
-    private Vector2 boardSize;
     private Cell[,] cells;
     private float cellSize;
     private float step;
@@ -44,7 +42,7 @@ public class GridManager : MonoSingleton<GridManager>
         config = newLevel;
         
         Vector2 visibleSize = CameraViewport.GetVisibleWorldSize(targetCamera);
-        boardSize = new Vector2(visibleSize.x * boardWidthPercent, visibleSize.y * boardHeightPercent);
+        Vector2 boardSize = new Vector2(visibleSize.x * boardWidthPercent, visibleSize.y * boardHeightPercent);
         
         float availableWidth = boardSize.x - 2f * outerPadding.x;
         float availableHeight = boardSize.y - 2f * outerPadding.y;
@@ -54,6 +52,8 @@ public class GridManager : MonoSingleton<GridManager>
 
         cellSize = Mathf.Min(cellSizeX, cellSizeY);
         step = cellSize * (1f + spacingRatio);
+
+        SyncPoolWithScene();
         
         EnsurePoolSize(config.ActiveCellCount);
         
@@ -73,7 +73,7 @@ public class GridManager : MonoSingleton<GridManager>
                 bool hasClue = config.TryGetClue(r, c, out LevelData.ClueEntry clue);
                 Sprite typeIcon = hasClue && clueTypeIcons != null ? clueTypeIcons.Get(clue.type) : null;
                 
-                cell.Init(r, c, hasClue, clue, typeIcon);
+                cell.Init(hasClue, clue, typeIcon);
                 cells[r, c] = cell;
                 index++;
             }
@@ -81,6 +81,12 @@ public class GridManager : MonoSingleton<GridManager>
 
         for (int i = index; i < cellPool.Count; i++)
             cellPool[i].gameObject.SetActive(false);
+    }
+
+    private void SyncPoolWithScene()
+    {
+        cellPool.Clear();
+        cellPool.AddRange(gridRoot.GetComponentsInChildren<Cell>(true));
     }
 
     public void GetWorldRect(int minRow, int maxRow, int minCol, int maxCol, out Vector3 center, out Vector2 size)
@@ -103,11 +109,21 @@ public class GridManager : MonoSingleton<GridManager>
     private void EnsurePoolSize(int needed)
     {
         while (cellPool.Count < needed)
-        {
-            Cell cell = Instantiate(cellPrefab, gridRoot);
-            cell.gameObject.SetActive(false);
-            cellPool.Add(cell);
-        }
+            cellPool.Add(CreateCell());
+    }
+
+    private Cell CreateCell()
+    {
+        Cell cell;
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+            cell = ((GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(cellPrefab.gameObject, gridRoot)).GetComponent<Cell>();
+        else
+#endif
+            cell = Instantiate(cellPrefab, gridRoot);
+        
+        cell.gameObject.SetActive(false);
+        return cell;
     }
 
     public Vector3 GridToWorld(int r, int c)
@@ -122,6 +138,13 @@ public class GridManager : MonoSingleton<GridManager>
 
     public bool WorldToGrid(Vector3 worldPos, out int r, out int c)
     {
+        if (config == null)
+        {
+            r = -1;
+            c = -1;
+            return false;
+        }
+        
         float halfWidth = (config.columns - 1) * step * 0.5f;
         float halfHeight = (config.rows - 1) * step * 0.5f;
 
@@ -140,7 +163,7 @@ public class GridManager : MonoSingleton<GridManager>
         return cells[r, c];
     }
 
-    public Room CommitRoom(int minRow, int maxRow, int minCol, int maxCol, Cell clueCell)
+    public Room CommitRoom(int minRow, int maxRow, int minCol, int maxCol)
     {
         IsReplacingRooms = true;
         for(int i = rooms.Count - 1; i >= 0; i--)
@@ -148,7 +171,7 @@ public class GridManager : MonoSingleton<GridManager>
                 RemoveRoom(rooms[i]);
         IsReplacingRooms = false;
         
-        var room = new Room(minRow, maxRow, minCol, maxCol, clueCell);
+        var room = new Room(minRow, maxRow, minCol, maxCol);
         rooms.Add(room);
         
         for (int r = minRow; r <= maxRow; r++)
