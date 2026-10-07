@@ -1,0 +1,396 @@
+{
+  "version": 1,
+  "source": "Statistics extracted from 205 reference levels (room partitions); no level data copied.",
+  "minRoomArea": 2,
+  "verticalBias": 0.623,
+  "sizeBands": [
+    {
+      "name": "small",
+      "minGrid": 1,
+      "maxGrid": 6
+    },
+    {
+      "name": "medium",
+      "minGrid": 7,
+      "maxGrid": 9
+    },
+    {
+      "name": "large",
+      "minGrid": 10,
+      "maxGrid": 12
+    }
+  ],
+  "shapes": [
+    {
+      "minSide": 1,
+      "maxSide": 2,
+      "area": 2,
+      "weights": {
+        "small": 0.2,
+        "medium": 0.1559,
+        "large": 0.0861
+      }
+    },
+    {
+      "minSide": 1,
+      "maxSide": 3,
+      "area": 3,
+      "weights": {
+        "small": 0.14,
+        "medium": 0.1443,
+        "large": 0.0869
+      }
+    },
+    {
+      "minSide": 1,
+      "maxSide": 4,
+      "area": 4,
+      "weights": {
+        "small": 0.07,
+        "medium": 0.1272,
+        "large": 0.0843
+      }
+    },
+    {
+      "minSide": 1,
+      "maxSide": 5,
+      "area": 5,
+      "weights": {
+        "small": 0.03,
+        "medium": 0.0753,
+        "large": 0.0714
+      }
+    },
+    {
+      "minSide": 1,
+      "maxSide": 6,
+      "area": 6,
+      "weights": {
+        "small": 0.03,
+        "medium": 0.0147,
+        "large": 0.0275
+      }
+    },
+    {
+      "minSide": 1,
+      "maxSide": 7,
+      "area": 7,
+      "weights": {
+        "small": 0.0,
+        "medium": 0.0178,
+        "large": 0.0413
+      }
+    },
+    {
+      "minSide": 2,
+      "maxSide": 2,
+      "area": 4,
+      "weights": {
+        "small": 0.22,
+        "medium": 0.0776,
+        "large": 0.062
+      }
+    },
+    {
+      "minSide": 2,
+      "maxSide": 3,
+      "area": 6,
+      "weights": {
+        "small": 0.16,
+        "medium": 0.1202,
+        "large": 0.1403
+      }
+    },
+    {
+      "minSide": 2,
+      "maxSide": 4,
+      "area": 8,
+      "weights": {
+        "small": 0.09,
+        "medium": 0.0978,
+        "large": 0.1205
+      }
+    },
+    {
+      "minSide": 2,
+      "maxSide": 5,
+      "area": 10,
+      "weights": {
+        "small": 0.0,
+        "medium": 0.0186,
+        "large": 0.0267
+      }
+    },
+    {
+      "minSide": 2,
+      "maxSide": 6,
+      "area": 12,
+      "weights": {
+        "small": 0.01,
+        "medium": 0.0178,
+        "large": 0.0215
+      }
+    },
+    {
+      "minSide": 2,
+      "maxSide": 7,
+      "area": 14,
+      "weights": {
+        "small": 0.0,
+        "medium": 0.0031,
+        "large": 0.006
+      }
+    },
+    {
+      "minSide": 3,
+      "maxSide": 3,
+      "area": 9,
+      "weights": {
+        "small": 0.05,
+        "medium": 0.0497,
+        "large": 0.0637
+      }
+    },
+    {
+      "minSide": 3,
+      "maxSide": 4,
+      "area": 12,
+      "weights": {
+        "small": 0.0,
+        "medium": 0.0458,
+        "large": 0.0775
+      }
+    },
+    {
+      "minSide": 3,
+      "maxSide": 5,
+      "area": 15,
+      "weights": {
+        "small": 0.0,
+        "medium": 0.0163,
+        "large": 0.0379
+      }
+    },
+    {
+      "minSide": 4,
+      "maxSide": 4,
+      "area": 16,
+      "weights": {
+        "small": 0.0,
+        "medium": 0.0062,
+        "large": 0.0164
+      }
+    },
+    {
+      "minSide": 4,
+      "maxSide": 5,
+      "area": 20,
+      "weights": {
+        "small": 0.0,
+        "medium": 0.0031,
+        "large": 0.0112
+      }
+    },
+    {
+      "minSide": 5,
+      "maxSide": 5,
+      "area": 25,
+      "weights": {
+        "small": 0.0,
+        "medium": 0.0085,
+        "large": 0.0189
+      }
+    }
+  ],
+  "roomsPerGrid": [
+    {
+      "grid": 3,
+      "min": 1,
+      "avg": 1.5,
+      "max": 3
+    },
+    {
+      "grid": 4,
+      "min": 4,
+      "avg": 4.0,
+      "max": 4
+    },
+    {
+      "grid": 5,
+      "min": 5,
+      "avg": 6.0,
+      "max": 7
+    },
+    {
+      "grid": 6,
+      "min": 6,
+      "avg": 7.4,
+      "max": 8
+    },
+    {
+      "grid": 7,
+      "min": 9,
+      "avg": 10.2,
+      "max": 12
+    },
+    {
+      "grid": 8,
+      "min": 10,
+      "avg": 11.5,
+      "max": 14
+    },
+    {
+      "grid": 9,
+      "min": 9,
+      "avg": 12.1,
+      "max": 14
+    },
+    {
+      "grid": 10,
+      "min": 13,
+      "avg": 14.6,
+      "max": 18
+    },
+    {
+      "grid": 11,
+      "min": 15,
+      "avg": 16.6,
+      "max": 18
+    },
+    {
+      "grid": 12,
+      "min": 17,
+      "avg": 18.6,
+      "max": 20
+    }
+  ],
+  "clueCornerBias": {
+    "line": 0.736,
+    "two": 0.731,
+    "big": 0.601
+  },
+  "tiers": [
+    {
+      "name": "Easy",
+      "fromLevel": 1,
+      "minGrid": 4,
+      "maxGrid": 6,
+      "rampLevels": 20,
+      "holeChance": 0.0,
+      "directionalChance": 0.0,
+      "hiddenMax": 0,
+      "hiddenFraction": 0.0,
+      "lockedMax": 0,
+      "lockedMaxUnlock": 3,
+      "requireUnique": false,
+      "repairAttempts": 5,
+      "moveSlack": 4,
+      "timeBase": 20,
+      "timePerRoom": 8
+    },
+    {
+      "name": "Medium",
+      "fromLevel": 21,
+      "minGrid": 6,
+      "maxGrid": 8,
+      "rampLevels": 30,
+      "holeChance": 0.3,
+      "directionalChance": 0.25,
+      "hiddenMax": 1,
+      "hiddenFraction": 0.15,
+      "lockedMax": 1,
+      "lockedMaxUnlock": 2,
+      "requireUnique": false,
+      "repairAttempts": 10,
+      "moveSlack": 2,
+      "timeBase": 15,
+      "timePerRoom": 7
+    },
+    {
+      "name": "Hard",
+      "fromLevel": 51,
+      "minGrid": 8,
+      "maxGrid": 12,
+      "rampLevels": 50,
+      "holeChance": 0.5,
+      "directionalChance": 0.25,
+      "hiddenMax": 4,
+      "hiddenFraction": 0.15,
+      "lockedMax": 2,
+      "lockedMaxUnlock": 3,
+      "requireUnique": true,
+      "repairAttempts": 30,
+      "moveSlack": 1,
+      "timeBase": 10,
+      "timePerRoom": 6
+    }
+  ],
+  "limitSchedule": {
+    "bothFromLevel": 30,
+    "bothEvery": 10,
+    "bothMoveExtra": 1,
+    "bothTimeFactor": 1.25,
+    "fallbackMode": 0,
+    "blocks": [
+      {
+        "fromLevel": 1,
+        "toLevel": 20,
+        "mode": 0,
+        "insertRuns": 0,
+        "insertMin": 0,
+        "insertMax": 0
+      },
+      {
+        "fromLevel": 21,
+        "toLevel": 30,
+        "mode": 1,
+        "insertRuns": 0,
+        "insertMin": 0,
+        "insertMax": 0
+      },
+      {
+        "fromLevel": 31,
+        "toLevel": 50,
+        "mode": 0,
+        "insertRuns": 2,
+        "insertMin": 3,
+        "insertMax": 4
+      },
+      {
+        "fromLevel": 51,
+        "toLevel": 70,
+        "mode": 1,
+        "insertRuns": 2,
+        "insertMin": 3,
+        "insertMax": 4
+      },
+      {
+        "fromLevel": 71,
+        "toLevel": 100,
+        "mode": 0,
+        "insertRuns": 3,
+        "insertMin": 3,
+        "insertMax": 4
+      }
+    ]
+  },
+  "holes": {
+    "maxRooms": 3,
+    "maxAreaFraction": 0.25,
+    "minRoomsLeft": 3
+  },
+  "mechanics": {
+    "holesFromLevel": 21,
+    "hiddenFromLevel": 26,
+    "directionalFromLevel": 31,
+    "lockedFromLevel": 36,
+    "introduceAtUnlock": true
+  },
+  "notes": [
+    "mode: 0 = timer only, 1 = moves only, 2 = both. insertRuns: random runs of the opposite mode inside a block.",
+    "shapes: orientation-free (minSide x maxSide); rotate using verticalBias for non-square shapes.",
+    "weights: share of rooms per grid-size band (each band sums to 1).",
+    "roomsPerGrid: observed rooms per level for square grids of that size.",
+    "clueCornerBias: probability the clue sits on a corner cell of its room (line=1xN, two=2xN, big=3+xN)."
+  ]
+}

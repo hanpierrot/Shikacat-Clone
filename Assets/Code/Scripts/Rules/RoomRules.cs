@@ -1,6 +1,4 @@
-using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 
 public enum RoomCheckResult
 {
@@ -81,7 +79,7 @@ public static class RoomRules
         return RoomCheckResult.Valid;
     }
     
-    private static bool MatchesShape(ClueType type, int width, int height)
+    public static bool MatchesShape(ClueType type, int width, int height)
     {
         switch (type)
         {

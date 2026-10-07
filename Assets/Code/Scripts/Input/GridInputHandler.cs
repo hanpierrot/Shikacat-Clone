@@ -1,13 +1,12 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class GridInputHandler : MonoBehaviour
 {
     public event Action<Vector2> PressStarted;
     public event Action<Vector2> PressMoved;
-    public event Action<Vector2, bool> PressEnded;
+    public event Action<bool> PressEnded;
     
     [Range(0f, 50f)]
     [SerializeField] private float dragThreshold = 10f;
@@ -32,6 +31,7 @@ public class GridInputHandler : MonoBehaviour
         switch (touch.phase)
         {
             case TouchPhase.Began:
+                if (IsPointerOverUI(touch.fingerId)) break;
                 activeFingerId = touch.fingerId;
                 BeginPress(touch.position);
                 break;
@@ -43,7 +43,7 @@ public class GridInputHandler : MonoBehaviour
             case TouchPhase.Ended:
             case TouchPhase.Canceled:
                 if (isPressed && touch.fingerId == activeFingerId)
-                    EndPress(touch.position);
+                    EndPress();
                 activeFingerId = -1;
                 break;
         }
@@ -53,6 +53,7 @@ public class GridInputHandler : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0))
         {
+            if (IsPointerOverUI()) return;
             BeginPress(Input.mousePosition);
         }
         else if (Input.GetMouseButton(0) && isPressed)
@@ -61,7 +62,7 @@ public class GridInputHandler : MonoBehaviour
         }
         else if (Input.GetMouseButtonUp(0) && isPressed)
         {
-            EndPress(Input.mousePosition);
+            EndPress();
         }
     }
     
@@ -81,12 +82,20 @@ public class GridInputHandler : MonoBehaviour
         PressMoved?.Invoke(position);
     }
     
-    private void EndPress(Vector2 position)
+    private void EndPress()
     {
         isPressed = false;
 
-        PressEnded?.Invoke(position, isDragging);
+        PressEnded?.Invoke(isDragging);
         
         isDragging = false;
+    }
+    
+    private static bool IsPointerOverUI(int touchFingerId = -1)
+    {
+        if (EventSystem.current == null) return false;
+        return touchFingerId < 0
+            ? EventSystem.current.IsPointerOverGameObject()
+            : EventSystem.current.IsPointerOverGameObject(touchFingerId);
     }
 }

@@ -1,6 +1,3 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -21,13 +18,20 @@ public class GameManager : MonoSingleton<GameManager>
     [SerializeField] private Button nextLevelButton;
     [SerializeField] private Button restartButton;
     
+    public const string EditorStartLevelKey = "Shikacat.StartLevelIndex";
+    
     private LevelData[] levels;
     private LevelData currentLevel;
     private int currentLevelIndex;
     private float timeRemaining;
+    private int displayedSeconds = -1;
     private int movesRemaining;
     private bool isGameOver;
     private bool isLoading;
+
+    public bool IsGameOver => isGameOver;
+    
+    private bool HasNextLevel => levels != null && currentLevelIndex + 1 < levels.Length;
     
     private void OnEnable()
     {
@@ -45,7 +49,7 @@ public class GameManager : MonoSingleton<GameManager>
     private void Start()
     {
         levels = LevelLoader.Load(levelsJson);
-        LoadLevel(0);
+        LoadLevel(ConsumeEditorStartLevel());
     }
 
     private void Update()
@@ -64,9 +68,28 @@ public class GameManager : MonoSingleton<GameManager>
         UpdateTimerText();
     }
 
+    private static int ConsumeEditorStartLevel()
+    {
+#if UNITY_EDITOR
+        int index = UnityEditor.EditorPrefs.GetInt(EditorStartLevelKey, -1);
+        if (index >= 0)
+        {
+            UnityEditor.EditorPrefs.DeleteKey(EditorStartLevelKey);
+            return index;
+        }
+#endif
+        return 0;
+    }
+
+    public void LoadLevelAt(int index) => LoadLevel(index);
+    
     private void LoadLevel(int index)
     {
-        if (levels == null || levels.Length == 0) return;
+        if (levels == null || levels.Length == 0)
+        {
+            Debug.LogError("GameManager: không có level nào để chơi (kiểm tra levelsJson).");
+            return;
+        }
         
         currentLevelIndex = Mathf.Clamp(index, 0, levels.Length - 1);
         currentLevel = levels[currentLevelIndex];
@@ -86,6 +109,7 @@ public class GameManager : MonoSingleton<GameManager>
         if (timerText != null) timerText.gameObject.SetActive(currentLevel.HasTimeLimit);
         if (moveLimitText != null) moveLimitText.gameObject.SetActive(currentLevel.HasMoveLimit);
         
+        displayedSeconds = -1;
         UpdateTimerText();
         UpdateMoveText();
     }
@@ -95,9 +119,9 @@ public class GameManager : MonoSingleton<GameManager>
         if (timerText == null) return;
 
         int totalSeconds = Mathf.CeilToInt(timeRemaining);
-        int minutes = totalSeconds / 60;
-        int seconds = totalSeconds % 60;
-        timerText.text = $"{minutes:00}:{seconds:00}";
+        if (totalSeconds == displayedSeconds) return;
+        displayedSeconds = totalSeconds;
+        timerText.text = $"{totalSeconds / 60:00}:{totalSeconds % 60:00}";
     }
     
     private void UpdateMoveText()
@@ -147,24 +171,23 @@ public class GameManager : MonoSingleton<GameManager>
     {
         if (isGameOver) return;
         isGameOver = true;
-        if (gameOverImage != null && gameOverPanel != null && nextLevelButton != null)
-        {
-            gameOverImage.sprite = winSprite;
-            gameOverPanel.SetActive(true);
-            nextLevelButton.gameObject.SetActive(true);
-        }
+
+        bool hasNext = HasNextLevel;
+        if (gameOverPanel != null) gameOverPanel.SetActive(true);
+        if (gameOverImage != null) gameOverImage.sprite = winSprite;
+        if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(hasNext);
+        if (restartButton != null) restartButton.gameObject.SetActive(!hasNext); 
     }
 
     private void HandleLose()
     {
         if (isGameOver) return;
         isGameOver = true;
-        if (gameOverImage != null && gameOverPanel != null && restartButton != null)
-        {
-            gameOverImage.sprite = loseSprite;
-            gameOverPanel.SetActive(true);
-            restartButton.gameObject.SetActive(true);
-        }
+
+        if (gameOverPanel != null) gameOverPanel.SetActive(true);
+        if (gameOverImage != null) gameOverImage.sprite = loseSprite;
+        if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(false);
+        if (restartButton != null) restartButton.gameObject.SetActive(true);
     }
     
     public void LoadNextLevel()
@@ -174,6 +197,7 @@ public class GameManager : MonoSingleton<GameManager>
     
     public void RestartLevel()
     {
+        if (!HasNextLevel) return;
         LoadLevel(currentLevelIndex);
     }
 }

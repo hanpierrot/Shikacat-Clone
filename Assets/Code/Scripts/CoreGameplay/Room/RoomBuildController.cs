@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -17,6 +16,9 @@ public class RoomBuildController : MonoBehaviour
     [SerializeField] private Transform roomVisualRoot;
     [SerializeField] private CatPalette catPalette;
     [SerializeField] private float referenceCellSize = 1f;
+    [SerializeField] private float invalidPreviewHoldDuration = 0.25f;
+
+    private static bool IsInputLocked => GameManager.Instance != null && GameManager.Instance.IsGameOver;
     
     private readonly List<RoomVisual> roomPanelPool = new List<RoomVisual>();
 
@@ -54,11 +56,15 @@ public class RoomBuildController : MonoBehaviour
         inputHandler.PressEnded -= HandlePressEnded;
         if (GridManager.Instance != null)
             GridManager.Instance.RoomRemoved -= ReleaseRoomPanel;
+
+        StopAllCoroutines();
+        isResolving = false;
+        FinishPress();
     }
 
     private void HandlePressStarted(Vector2 screenPosition)
     {
-        if (isResolving) return;
+        if (isResolving || IsInputLocked) return;
         
         Vector3 world = targetCamera.ScreenToWorldPoint(screenPosition);
         isPressValid = GridManager.Instance.WorldToGrid(world, out startRow, out startCol);
@@ -69,7 +75,7 @@ public class RoomBuildController : MonoBehaviour
     
     private void HandlePressMoved(Vector2 screenPosition)
     {
-        if (!isPressValid || isResolving) return;
+        if (!isPressValid || isResolving || IsInputLocked) return;
 
         Vector3 world = targetCamera.ScreenToWorldPoint(screenPosition);
         if (!GridManager.Instance.WorldToGrid(world, out int row, out int col)) return;
@@ -79,50 +85,53 @@ public class RoomBuildController : MonoBehaviour
             Mathf.Min(startCol, col), Mathf.Max(startCol, col));
     }
 
-    private void HandlePressEnded(Vector2 screenPosition, bool wasDrag)
+    private void HandlePressEnded(bool wasDrag)
     {
         if (!isPressValid || isResolving) return;
         
-        bool isValid = TryValidateSelection(out _);
-        if (!isValid)
+        if (IsInputLocked)
         {
-            UpdatePreviewOverlay(invalidPreviewSprite);
-            isResolving = true;
-            StartCoroutine(ResolveAfterDelay(wasDrag));
+            FinishPress();
+            return;
+        }
+        
+        if (!wasDrag && roomRemoveController != null && roomRemoveController.TryRemoveAt(startRow, startCol))
+        {
+            FinishPress();
             return;
         }
 
-        if (dragPreviewOverlay != null) dragPreviewOverlay.gameObject.SetActive(false);
-        
-        ResolvePressEnd(wasDrag);
+        if (!TryValidateSelection(out _))
+        {
+            UpdatePreviewOverlay(invalidPreviewSprite);
+            isResolving = true;
+            StartCoroutine(ResolveAfterDelay());
+            return;
+        }
+
+        TryCommitSelection();
+        FinishPress();
     }
-    private IEnumerator ResolveAfterDelay(bool wasDrag)
+    private IEnumerator ResolveAfterDelay()
     {
-        yield return new WaitForSeconds(0.25f);
-        if (dragPreviewOverlay != null) dragPreviewOverlay.gameObject.SetActive(false);
-        ResolvePressEnd(wasDrag);
+        yield return new WaitForSeconds(invalidPreviewHoldDuration);
+        FinishPress();
         isResolving = false;
     }
     
-    private void ResolvePressEnd(bool wasDrag)
+    private void FinishPress()
     {
-        bool handledAsRemove = !wasDrag && roomRemoveController != null
-                                        && roomRemoveController.TryRemoveAt(currentMinRow, currentMinCol);
-
-        if (!handledAsRemove)
-            TryCommitSelection();
-
+        if (dragPreviewOverlay != null) dragPreviewOverlay.gameObject.SetActive(false);
         ResetBounds();
         isPressValid = false;
     }
     
     private void TryCommitSelection()
     {
-        if (TryValidateSelection(out Cell clueCell))
-        {
-            Room room = GridManager.Instance.CommitRoom(currentMinRow, currentMaxRow, currentMinCol, currentMaxCol, clueCell);
-            SpawnRoomPanel(room, clueCell.ClueColor);
-        }
+        if (!TryValidateSelection(out LevelData.ClueEntry clue)) return;
+
+        Room room = GridManager.Instance.CommitRoom(currentMinRow, currentMaxRow, currentMinCol, currentMaxCol);
+        SpawnRoomPanel(room, clue.color);
     }
 
     private void SetPreviewBounds(int minRow, int maxRow, int minCol, int maxCol)
@@ -157,8 +166,17 @@ public class RoomBuildController : MonoBehaviour
 
     private void SpawnRoomPanel(Room room, CatColor color)
     {
-        if (roomPanelPrefab == null || catPalette == null) return;
-        if (!catPalette.TryGet(color, out var entry)) return;
+        if (roomPanelPrefab == null || catPalette == null)
+        {
+            Debug.LogWarning("RoomBuildController: thiếu roomPanelPrefab hoặc catPalette, phòng sẽ không có hình.");
+            return;
+        }
+
+        if (!catPalette.TryGet(color, out var entry))
+        {
+            Debug.LogWarning($"RoomBuildController: CatPalette thiếu màu {color}, phòng sẽ không có hình.");
+            return;
+        }
         
         RoomVisual panel = GetPooledPanel();
         GridManager.Instance.GetWorldRect(room.MinRow, room.MaxRow, room.MinColumn, room.MaxColumn, out Vector3 center, out Vector2 size);
@@ -194,14 +212,10 @@ public class RoomBuildController : MonoBehaviour
         currentMaxCol = -1;
     }
 
-    private bool TryValidateSelection(out Cell clueCell)
+    private bool TryValidateSelection(out LevelData.ClueEntry clue)
     {
-        clueCell = null;
         RoomCheckResult result = GridManager.Instance.CheckRoom(
-            currentMinRow, currentMaxRow, currentMinCol, currentMaxCol, out LevelData.ClueEntry clue);
-        if (result != RoomCheckResult.Valid) return false;
-
-        clueCell = GridManager.Instance.GetCell(clue.row, clue.col);
-        return true;
+            currentMinRow, currentMaxRow, currentMinCol, currentMaxCol, out clue);
+        return result == RoomCheckResult.Valid;
     }
 }
