@@ -86,7 +86,7 @@ public class LevelData
         return false;
     }
     
-    public bool Validate(out string error)
+    public bool ValidateStructure(out string error)
     {
         if (rows < 1 || columns < 1) { error = "rows/columns phải >= 1"; return false; }
 
@@ -144,7 +144,8 @@ public class LevelData
             return false;
         }
 
-        return ValidateSolution(out error);
+        error = null;
+        return true;
     }
 
     private bool ValidateSolution(out string error)
@@ -230,6 +231,12 @@ public class LevelData
         }
 
         return true;
+    }
+
+    public bool Validate(out string error)
+    {
+        if (!ValidateStructure(out error)) return false;
+        return ValidateSolution(out error);
     }
     
     private bool InRange(int row, int col) => row >= 0 && row < rows && col >= 0 && col < columns;
