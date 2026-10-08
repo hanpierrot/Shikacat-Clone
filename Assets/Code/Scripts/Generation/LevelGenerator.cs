@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.WSA;
 using Random = System.Random;
 
 public sealed class GenerationOptions
@@ -43,7 +41,6 @@ public static class LevelGenerator
         public int ClueRow, ClueCol;
         public ClueType Type;
         public int UnlockCount;
-        public CatColor Color;
     }
 
     private struct Placement
@@ -80,10 +77,27 @@ public static class LevelGenerator
         GeneratorConfig.Tier tier = config.GetTier(levelNumber);
         LimitMode mode = config.ResolveMode(levelNumber, options.Seed);
         ActiveMechanics mech = ResolveMechanics(config, options, levelNumber);
+
+        int minGrid, maxGrid;
+        bool uniformPick;
+        if (options.OverrideGrid)
+        {
+            minGrid = options.OverrideMinGrid;
+            maxGrid = options.OverrideMaxGrid;
+            uniformPick = true;
+        }
+        else if(config.GetGridRange(levelNumber, out minGrid, out maxGrid))
+        {
+            uniformPick = true;
+        }
+        else
+        {
+            minGrid = tier.minGrid;
+            maxGrid = tier.maxGrid;
+            uniformPick = false;
+        }
         
-        int minGrid = options.OverrideGrid ? options.OverrideMinGrid : tier.minGrid;
-        int maxGrid = options.OverrideGrid ? options.OverrideMaxGrid : tier.maxGrid;
-        if (maxGrid < minGrid) maxGrid = minGrid;
+        if(maxGrid < minGrid) maxGrid = minGrid;
 
         LevelData fallback = null;
         GenerationInfo fallbackInfo = null;
@@ -91,7 +105,7 @@ public static class LevelGenerator
         for (int attempt = 1; attempt <= options.MaxAttemptsPerLevel; attempt++)
         {
             var rng = new Random(MixSeed(options.Seed, levelNumber, attempt));
-            int grid = PickGrid(tier, minGrid, maxGrid, levelNumber, options.OverrideGrid, rng);
+            int grid = PickGrid(tier, minGrid, maxGrid, levelNumber, uniformPick, rng);
             
             // Create grid filled with rooms
             List<RoomPlan> plans = Tile(config, rng, grid);
@@ -104,13 +118,12 @@ public static class LevelGenerator
             var holes = new List<LevelData.CellCoord>();
             int holeRooms = 0;
             if (mech.Holes && (mech.ForceHoles || (tier.holeChance > 0 && rng.NextDouble() < tier.holeChance)))
-                holeRooms = ConvertRoomsToHoles(config, rng, plans, holes);
+                holeRooms = ConvertRoomsToHoles(config, tier, rng, plans, holes);
 
             if (mech.ForceHoles && holeRooms == 0) continue;
             
-            // Place ClueType and Color
+            // Place ClueType
             AssignTypes(tier, mech, rng, plans);
-            AssignColors(rng, plans, grid);
             
             // Build level, use solver, edit duplicate
             LevelData level = BuildLevel(config, tier, mode, plans, holes, grid, out List<RoomPlan> ordered);
@@ -144,13 +157,12 @@ public static class LevelGenerator
         return fallback;
     }
 
-    private static int PickGrid(GeneratorConfig.Tier tier, int minGrid, int maxGrid, int levelNumber, bool overridden,
-        Random rng)
+    private static int PickGrid(GeneratorConfig.Tier tier, int minGrid, int maxGrid, int levelNumber, bool uniformPick, Random rng)
     {
         if (maxGrid <= minGrid) return minGrid;
 
         int size;
-        if (overridden)
+        if (uniformPick)
         {
             size = rng.Next(minGrid, maxGrid + 1);
         }
@@ -304,42 +316,104 @@ public static class LevelGenerator
     }
     
     // Turn room into hole
-    private static int ConvertRoomsToHoles(GeneratorConfig config, Random rng, List<RoomPlan> plans,
-        List<LevelData.CellCoord> holes)
+    private static int ConvertRoomsToHoles(GeneratorConfig config, GeneratorConfig.Tier tier, Random rng,
+        List<RoomPlan> plans, List<LevelData.CellCoord> holes)
     {
         GeneratorConfig.HoleSettings settings = config.holes;
+        int clusterSize = Math.Max(1, settings.clusterSize);
 
-        int maxByLeft = plans.Count - settings.minRoomsLeft;
-        if (maxByLeft < 1) return 0;
+        int roomBudget = Math.Min(settings.maxRooms, plans.Count - settings.minRoomsLeft);
+        if (roomBudget < 1) return 0;
 
         int totalCells = 0;
         foreach (RoomPlan room in plans) totalCells += room.Width * room.Height;
-
-        int wanted = Math.Min(rng.Next(1, settings.maxRooms + 1), maxByLeft);
         int areaCap = (int)Math.Floor(totalCells * settings.maxAreaFraction);
-        int areaUsed = 0;
+        
+        int minGroups = Math.Max(1, tier.holeMinGroups);
+        int groups = rng.Next(minGroups, Math.Max(minGroups, tier.holeMaxGroups) + 1);
+        
         int removed = 0;
+        int areaUsed = 0;
+        int made = 0;
+        
+        var seeds = new List<RoomPlan>(plans);
+        Shuffle(seeds, rng);
 
-        var order = new List<RoomPlan>(plans);
-        Shuffle(order, rng);
-
-        foreach (RoomPlan room in order)
+        foreach (RoomPlan seed in seeds)
         {
-            if (removed >= wanted) break;
+            if(made >= groups) break;
+            if(!plans.Contains(seed)) continue;
 
-            int area = room.Width * room.Height;
-            if (areaUsed + area > areaCap) continue;
+            var cluster = new List<RoomPlan> { seed };
+            int clusterArea = seed.Width * seed.Height;
 
-            plans.Remove(room);
-            for (int r = room.Row; r < room.Row + room.Height; r++)
-            for (int c = room.Col; c < room.Col + room.Width; c++)
-                holes.Add(new LevelData.CellCoord { row = r, col = c });
+            while (cluster.Count < clusterSize)
+            {
+                var neighbors = new List<RoomPlan>();
+                foreach (RoomPlan other in plans)
+                {
+                    if(cluster.Contains(other)) continue;
+                    if(areaUsed + clusterArea + other.Width * other.Height > areaCap) continue;
 
-            areaUsed += area;
-            removed++;
+                    foreach (RoomPlan member in cluster)
+                    {
+                        if(!IsAdjacent(member, other)) continue;
+                        neighbors.Add(other);
+                        break;
+                    }
+                }
+                
+                if(neighbors.Count == 0) break;
+                RoomPlan next = neighbors[rng.Next(neighbors.Count)];
+                cluster.Add(next);
+                clusterArea += next.Width * next.Height;
+            }
+            
+            if(cluster.Count < clusterSize) continue;
+            if(removed + cluster.Count > roomBudget) continue;
+            if(areaUsed + clusterArea > areaCap) continue;
+            
+            foreach(RoomPlan room in cluster) RemoveRoomToHoles(plans, room, holes);
+            
+            removed += cluster.Count;
+            areaUsed += clusterArea;
+            made++;
         }
 
+        if (made == 0)
+        {
+            RoomPlan smallest = null;
+            foreach (RoomPlan room in plans)
+            {
+                int area = room.Width * room.Height;
+                if (area > areaCap) continue;
+                if(smallest == null || area < smallest.Width * smallest.Height) smallest = room;
+            }
+
+            if (smallest == null) return 0;
+            RemoveRoomToHoles(plans, smallest, holes);
+            removed = 1;
+        }
+        
         return removed;
+    }
+    
+    private static bool IsAdjacent(RoomPlan a, RoomPlan b)
+    {
+        bool rowsOverlap = a.Row < b.Row + b.Height && b.Row < a.Row + a.Height;
+        bool colsOverlap = a.Col < b.Col + b.Width && b.Col < a.Col + a.Width;
+
+        bool sideBySide = rowsOverlap && (a.Col + a.Width == b.Col || b.Col + b.Width == a.Col);
+        bool stacked = colsOverlap && (a.Row + a.Height == b.Row || b.Row + b.Height == a.Row);
+        return sideBySide || stacked;
+    }
+    
+    private static void RemoveRoomToHoles(List<RoomPlan> plans, RoomPlan room, List<LevelData.CellCoord> holes)
+    {
+        plans.Remove(room);
+        for (int r = room.Row; r < room.Row + room.Height; r++)
+        for (int c = room.Col; c < room.Col + room.Width; c++)
+            holes.Add(new LevelData.CellCoord { row = r, col = c });
     }
     
     // Place ClueType
@@ -429,83 +503,6 @@ public static class LevelGenerator
         };
     }
     
-    // Set room color
-    private static void AssignColors(Random rng, List<RoomPlan> plans, int grid)
-    {
-        int colorCount = Enum.GetValues(typeof(CatColor)).Length;
-        int n = plans.Count;
-
-        var owner = new int[grid, grid];
-        for (int r = 0; r < grid; r++)
-            for (int c = 0; c < grid; c++)
-                owner[r, c] = -1;
-
-        for (int i = 0; i < n; i++)
-            for (int r = plans[i].Row; r < plans[i].Row + plans[i].Height; r++)
-                for (int c = plans[i].Col; c < plans[i].Col + plans[i].Width; c++)
-                    owner[r, c] = i;
-
-        var neighbors = new HashSet<int>[n];
-        for (int i = 0; i < n; i++) neighbors[i] = new HashSet<int>();
-
-        for (int r = 0; r < grid; r++)
-        {
-            for (int c = 0; c < grid; c++)
-            {
-                int a = owner[r, c];
-                if (a < 0) continue;
-
-                if (c + 1 < grid && owner[r, c + 1] >= 0 && owner[r, c + 1] != a)
-                {
-                    neighbors[a].Add(owner[r, c + 1]);
-                    neighbors[owner[r, c + 1]].Add(a);
-                }
-                if (r + 1 < grid && owner[r + 1, c] >= 0 && owner[r + 1, c] != a)
-                {
-                    neighbors[a].Add(owner[r + 1, c]);
-                    neighbors[owner[r + 1, c]].Add(a);
-                }
-            }
-        }
-
-        var order = new List<int>();
-        for (int i = 0; i < n; i++) order.Add(i);
-        Shuffle(order, rng);
-        order.Sort((x, y) => neighbors[y].Count.CompareTo(neighbors[x].Count));
-
-        var color = new int[n];
-        for (int i = 0; i < n; i++) color[i] = -1;
-        var usage = new int[colorCount];
-
-        foreach (int i in order)
-        {
-            var candidates = new List<int>();
-            int bestUsage = int.MaxValue;
-
-            for (int col = 0; col < colorCount; col++)
-            {
-                bool taken = false;
-                foreach (int neighbor in neighbors[i])
-                {
-                    if (color[neighbor] == col) { taken = true; break; }
-                }
-                if (taken) continue;
-
-                if (usage[col] < bestUsage)
-                {
-                    bestUsage = usage[col];
-                    candidates.Clear();
-                }
-                if (usage[col] == bestUsage) candidates.Add(col);
-            }
-
-            int chosen = candidates.Count > 0 ? candidates[rng.Next(candidates.Count)] : rng.Next(colorCount);
-            color[i] = chosen;
-            usage[chosen]++;
-            plans[i].Color = (CatColor)chosen;
-        }
-    }
-    
     // Build LevelData
     private static LevelData BuildLevel(GeneratorConfig config, GeneratorConfig.Tier tier, LimitMode mode,
         List<RoomPlan> plans, List<LevelData.CellCoord> holes, int grid, out List<RoomPlan> ordered)
@@ -534,7 +531,6 @@ public static class LevelGenerator
                 row = plan.ClueRow,
                 col = plan.ClueCol,
                 value = plan.Width * plan.Height,
-                color = plan.Color,
                 type = plan.Type,
                 unlockRoomCount = plan.Type == ClueType.Locked ? plan.UnlockCount : 0
             };

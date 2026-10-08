@@ -10,7 +10,6 @@ public class LevelData
         public int row;
         public int col;
         public int value;
-        public CatColor color;
         public ClueType type;
         public int unlockRoomCount;
     }
@@ -131,8 +130,6 @@ public class LevelData
                     return false;
                 }
             }
-            
-            if (!Enum.IsDefined(typeof(CatColor), clue.color)) { error = $"clue ({clue.row},{clue.col}) có color không tồn tại ({(int)clue.color})"; return false; }
             
             seen[clue.row, clue.col] = true;
             clueAreaSum += clue.value;

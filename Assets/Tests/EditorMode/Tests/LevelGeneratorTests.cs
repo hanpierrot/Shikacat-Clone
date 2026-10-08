@@ -163,6 +163,23 @@ public class LevelGeneratorTests
 
         Assert.IsTrue(HasType(LevelGenerator.Generate(config, 36, options, out _), ClueType.Locked), "Level 36 phải có clue khoá");
     }
+    
+    [Test]
+    public void GridSize_FollowsCurve()
+    {
+        GeneratorConfig config = LoadConfig();
+        var options = new GenerationOptions { Seed = 7 };
+
+        for (int number = 1; number <= 20; number++)
+        {
+            LevelData level = LevelGenerator.Generate(config, number, options, out GenerationInfo info);
+            Assert.IsNotNull(level, $"Level {number}");
+
+            config.GetGridRange(number, out int min, out int max);
+            Assert.GreaterOrEqual(info.Grid, min, $"Level {number}: grid quá nhỏ");
+            Assert.LessOrEqual(info.Grid, max, $"Level {number}: grid quá lớn");
+        }
+    }
 
     private static bool HasType(LevelData level, ClueType type)
     {

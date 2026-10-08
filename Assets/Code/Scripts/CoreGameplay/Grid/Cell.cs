@@ -7,7 +7,6 @@ public class Cell : MonoBehaviour
     [SerializeField] private TMPro.TextMeshPro valueLabel;
     
     public int ClueValue { get; private set; }
-    public CatColor ClueColor { get; private set; }
     public ClueType ClueType { get; private set; }
     public bool HasClue => ClueValue > 0;
     public Room AssignedRoom { get; private set; }
@@ -16,7 +15,6 @@ public class Cell : MonoBehaviour
     public void Init(bool hasClue, LevelData.ClueEntry clue, Sprite typeIcon)
     {
         ClueValue = hasClue ? clue.value : 0;
-        ClueColor = hasClue ? clue.color : default;
         ClueType = hasClue ? clue.type : ClueType.Normal;
         unlockRoomCount = hasClue ? clue.unlockRoomCount : 0;
         AssignedRoom = null;

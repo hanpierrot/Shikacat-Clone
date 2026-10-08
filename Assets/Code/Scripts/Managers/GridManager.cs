@@ -29,6 +29,7 @@ public class GridManager : MonoSingleton<GridManager>
     private readonly List<Cell> cellPool = new List<Cell>();
     
     public float CellSize => cellSize;
+    public IReadOnlyList<Room> Rooms => rooms;
     public bool IsReplacingRooms { get; private set; }
 
     public RoomCheckResult CheckRoom(int minRow, int maxRow, int minCol, int maxCol, out LevelData.ClueEntry clue)
