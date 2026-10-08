@@ -186,6 +186,7 @@ public class RoomBuildController : MonoBehaviour
         
         float scaleFactor = GridManager.Instance.CellSize / referenceCellSize;
         panel.SetUp(center, size, entry.panelBoxSprite, entry.panelBoxWallSprite, scaleFactor);
+        panel.SetCat(entry.catIconSprite);
         panel.gameObject.SetActive(true);
         room.Visual = panel;
     }
@@ -226,6 +227,7 @@ public class RoomBuildController : MonoBehaviour
     private void ReleaseRoomPanel(Room room)
     {
         if (room?.Visual == null) return;
+        room.Visual.SetCat(null);
         room.Visual.gameObject.SetActive(false);
         room.Visual = null;
     }
