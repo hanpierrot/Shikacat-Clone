@@ -1,7 +1,7 @@
 {
     "name": "Shikacat.Runtime",
     "rootNamespace": "",
-    "references": ["Unity.TextMeshPro", "UnityEngine.UI"],
+    "references": ["Unity.TextMeshPro", "UnityEngine.UI", "spine-unity", "spine-csharp"],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
