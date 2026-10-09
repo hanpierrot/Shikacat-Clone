@@ -21,6 +21,8 @@ public class RoomBuildController : MonoBehaviour
     private static bool IsInputLocked => GameManager.Instance != null && GameManager.Instance.IsGameOver;
     
     private readonly List<RoomVisual> roomPanelPool = new List<RoomVisual>();
+    private readonly List<CatColor> colorBuffer = new List<CatColor>();
+    private readonly List<CatColor> candidateBuffer = new List<CatColor>();
 
     private int startRow, startCol;
     private int currentMinRow, currentMaxRow, currentMinCol, currentMaxCol;
@@ -131,7 +133,7 @@ public class RoomBuildController : MonoBehaviour
         if (!TryValidateSelection(out LevelData.ClueEntry clue)) return;
 
         Room room = GridManager.Instance.CommitRoom(currentMinRow, currentMaxRow, currentMinCol, currentMaxCol);
-        SpawnRoomPanel(room, clue.color);
+        SpawnRoomPanel(room);
     }
 
     private void SetPreviewBounds(int minRow, int maxRow, int minCol, int maxCol)
@@ -164,17 +166,18 @@ public class RoomBuildController : MonoBehaviour
         dragPreviewOverlay.gameObject.SetActive(true);
     }
 
-    private void SpawnRoomPanel(Room room, CatColor color)
+    private void SpawnRoomPanel(Room room)
     {
         if (roomPanelPrefab == null || catPalette == null)
         {
             Debug.LogWarning("RoomBuildController: thiếu roomPanelPrefab hoặc catPalette, phòng sẽ không có hình.");
             return;
         }
-
-        if (!catPalette.TryGet(color, out var entry))
+        
+        room.Color = PickColor(room); 
+        if (!catPalette.TryGet(room.Color, out var entry))
         {
-            Debug.LogWarning($"RoomBuildController: CatPalette thiếu màu {color}, phòng sẽ không có hình.");
+            Debug.LogWarning($"RoomBuildController: CatPalette thiếu màu {room.Color}, phòng sẽ không có hình.");
             return;
         }
         
@@ -183,8 +186,32 @@ public class RoomBuildController : MonoBehaviour
         
         float scaleFactor = GridManager.Instance.CellSize / referenceCellSize;
         panel.SetUp(center, size, entry.panelBoxSprite, entry.panelBoxWallSprite, scaleFactor);
+        panel.SetCat(entry.catIconSprite);
         panel.gameObject.SetActive(true);
         room.Visual = panel;
+    }
+    
+    private CatColor PickColor(Room room)
+    {
+        catPalette.GetColors(colorBuffer);
+        if (colorBuffer.Count == 0) return default;
+
+        candidateBuffer.Clear();
+        foreach (CatColor color in colorBuffer)
+        {
+            bool usedByNeighbor = false;
+            foreach (Room other in GridManager.Instance.Rooms)
+            {
+                if (other == room || other.Color != color || !room.IsAdjacentTo(other)) continue;
+                usedByNeighbor = true;
+                break;
+            }
+
+            if (!usedByNeighbor) candidateBuffer.Add(color);
+        }
+
+        List<CatColor> pool = candidateBuffer.Count > 0 ? candidateBuffer : colorBuffer;
+        return pool[Random.Range(0, pool.Count)];
     }
 
     private RoomVisual GetPooledPanel()
@@ -200,6 +227,7 @@ public class RoomBuildController : MonoBehaviour
     private void ReleaseRoomPanel(Room room)
     {
         if (room?.Visual == null) return;
+        room.Visual.SetCat(null);
         room.Visual.gameObject.SetActive(false);
         room.Visual = null;
     }

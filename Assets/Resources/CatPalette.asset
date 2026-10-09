@@ -15,7 +15,7 @@ MonoBehaviour:
   entries:
   - color: 0
     catIconSprite: {fileID: 21300000, guid: 509f409a3d789514fbacb7e96445d17d, type: 3}
-    panelBoxSprite: {fileID: -2024555208, guid: 157fd5543146a7445b0d5ebd4e894f25, type: 3}
+    panelBoxSprite: {fileID: 616854572, guid: 852082236852399469c25957dbe0ab85, type: 3}
     panelBoxWallSprite: {fileID: 21300000, guid: 84338da484d79e744a592c26364652ab, type: 3}
   - color: 1
     catIconSprite: {fileID: 21300000, guid: cb7258e003d6ab149910114eade54f50, type: 3}
@@ -28,7 +28,7 @@ MonoBehaviour:
   - color: 3
     catIconSprite: {fileID: 21300000, guid: de38cdeed243afb40917421404fdc701, type: 3}
     panelBoxSprite: {fileID: -200411419, guid: fd5fdd6ed8df8b044a74782ad55030a0, type: 3}
-    panelBoxWallSprite: {fileID: 21300000, guid: 683926a89000a6c40917d40b1707975f, type: 3}
+    panelBoxWallSprite: {fileID: 21300000, guid: 67f3143994ade014bb27d49e9b5d35b7, type: 3}
   - color: 4
     catIconSprite: {fileID: 21300000, guid: a5969a3fa1c5f1949a1fabdfc9c861b2, type: 3}
     panelBoxSprite: {fileID: -976642638, guid: 75a5dbcdcd6e6f84caf6959f39acc5a1, type: 3}

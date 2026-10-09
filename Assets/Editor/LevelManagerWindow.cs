@@ -11,13 +11,7 @@ public class LevelManagerWindow : EditorWindow
 {
     private const string AssetPathKey = "Shikacat.LevelManager.AssetPath";
     
-    private static readonly Color[] CatColors =
-    {
-        new Color(0.30f, 0.50f, 0.95f), new Color(0.90f, 0.30f, 0.30f), new Color(0.35f, 0.75f, 0.40f),
-        new Color(1.00f, 0.55f, 0.75f), new Color(0.60f, 0.40f, 0.85f), new Color(0.25f, 0.70f, 0.70f),
-        new Color(0.20f, 0.80f, 1.00f), new Color(0.70f, 0.90f, 0.25f), new Color(1.00f, 0.60f, 0.20f),
-        new Color(1.00f, 0.90f, 0.30f), new Color(0.65f, 0.85f, 1.00f), new Color(1.00f, 0.70f, 0.60f)
-    };
+    private static readonly Color ClueCellColor = new Color(0.95f, 0.85f, 0.45f);
     
     private TextAsset levelsAsset;
     private LevelCollection collection;
@@ -34,7 +28,6 @@ public class LevelManagerWindow : EditorWindow
     private Brush brush = Brush.Clue;
     private int brushValue = 2;
     private ClueType brushType = ClueType.Normal;
-    private CatColor brushColor = CatColor.Blue;
     private int brushUnlockCount = 1;
     private (int row, int col) lastPaintCell = (-1, -1);
     private LevelSolver.Result solveResult;
@@ -237,7 +230,7 @@ public class LevelManagerWindow : EditorWindow
 
                 if (level.TryGetClue(r, c, out LevelData.ClueEntry clue))
                 {
-                    EditorGUI.DrawRect(rect, CatColors[(int)clue.color % CatColors.Length]);
+                    EditorGUI.DrawRect(rect, ClueCellColor);
                     GUI.Label(rect, ClueText(clue), cellLabelStyle);
                 }
             }
@@ -304,7 +297,6 @@ public class LevelManagerWindow : EditorWindow
         using (new EditorGUILayout.HorizontalScope())
         {
             brushValue = Mathf.Max(1, EditorGUILayout.IntField("Value", brushValue));
-            brushColor = (CatColor)EditorGUILayout.EnumPopup("Color", brushColor);
         }
         
         brushType = (ClueType)EditorGUILayout.EnumPopup("Type", brushType);
@@ -344,7 +336,6 @@ public class LevelManagerWindow : EditorWindow
                 if (level.TryGetClue(row, col, out LevelData.ClueEntry picked))
                 {
                     brushValue = picked.value;
-                    brushColor = picked.color;
                     brushType = picked.type;
                     brushUnlockCount = Mathf.Max(1, picked.unlockRoomCount);
                     brush = Brush.Clue;
@@ -369,7 +360,7 @@ public class LevelManagerWindow : EditorWindow
                 {
                     new LevelData.ClueEntry
                     {
-                        row = row, col = col, value = brushValue, color = brushColor, type = brushType,
+                        row = row, col = col, value = brushValue, type = brushType,
                         unlockRoomCount = brushType == ClueType.Locked ? brushUnlockCount : 0
                     }
                 };

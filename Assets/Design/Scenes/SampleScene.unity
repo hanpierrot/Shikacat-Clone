@@ -544,8 +544,8 @@ MonoBehaviour:
   boardWidthPercent: 0.9
   boardHeightPercent: 0.7
   outerPadding: {x: 0, y: 0}
-  spacingRatio: 0
-  clueTypeIcons: {fileID: 0}
+  spacingRatio: 0.05
+  clueTypeIcons: {fileID: 11400000, guid: 8c15dbbf5de4c1040a9e464d6f6eefc1, type: 2}
 --- !u!4 &164349589
 Transform:
   m_ObjectHideFlags: 0

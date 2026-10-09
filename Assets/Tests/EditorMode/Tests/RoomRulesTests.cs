@@ -251,15 +251,6 @@ public class RoomRulesTests
         Assert.IsNull(collection);
         Assert.IsNotNull(error);
     }
-
-    [Test]
-    public void Validate_RejectsUndefinedColor()
-    {
-        var clue = Clue(0, 0, 4);
-        clue.color = (CatColor)999;
-        var level = MakeLevel(2, 2, new[] { clue });
-        Assert.IsFalse(level.Validate(out _));
-    }
     
     [Test]
     public void Validate_AcceptsCorrectSolution()

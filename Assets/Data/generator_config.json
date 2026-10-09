@@ -294,7 +294,9 @@
       "minGrid": 6,
       "maxGrid": 8,
       "rampLevels": 30,
-      "holeChance": 0.3,
+      "holeChance": 0.5,
+      "holeMinGroups": 1,
+      "holeMaxGroups": 1,
       "directionalChance": 0.25,
       "hiddenMax": 1,
       "hiddenFraction": 0.15,
@@ -312,7 +314,9 @@
       "minGrid": 8,
       "maxGrid": 12,
       "rampLevels": 50,
-      "holeChance": 0.5,
+      "holeChance": 0.85,
+      "holeMinGroups": 1, 
+      "holeMaxGroups": 2,
       "directionalChance": 0.25,
       "hiddenMax": 4,
       "hiddenFraction": 0.15,
@@ -375,9 +379,10 @@
     ]
   },
   "holes": {
-    "maxRooms": 3,
-    "maxAreaFraction": 0.25,
-    "minRoomsLeft": 3
+    "maxRooms": 4, 
+    "maxAreaFraction": 0.25, 
+    "minRoomsLeft": 3, 
+    "clusterSize": 2
   },
   "mechanics": {
     "holesFromLevel": 21,
@@ -386,6 +391,16 @@
     "lockedFromLevel": 36,
     "introduceAtUnlock": true
   },
+  "gridCurve": [
+    { "level": 1,   "minGrid": 3,  "maxGrid": 3 },
+    { "level": 10,  "minGrid": 5,  "maxGrid": 6 },
+    { "level": 20,  "minGrid": 7,  "maxGrid": 8 },
+    { "level": 30,  "minGrid": 7,  "maxGrid": 9 },
+    { "level": 40,  "minGrid": 8,  "maxGrid": 10 },
+    { "level": 50,  "minGrid": 9,  "maxGrid": 11 },
+    { "level": 70,  "minGrid": 10, "maxGrid": 12 },
+    { "level": 100, "minGrid": 11, "maxGrid": 12 }
+  ],
   "notes": [
     "mode: 0 = timer only, 1 = moves only, 2 = both. insertRuns: random runs of the opposite mode inside a block.",
     "shapes: orientation-free (minSide x maxSide); rotate using verticalBias for non-square shapes.",

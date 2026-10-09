@@ -59,6 +59,8 @@ public class GeneratorConfig
         public int maxGrid;
         public int rampLevels;
         public float holeChance;
+        public int holeMinGroups = 1;
+        public int holeMaxGroups = 1;
         public float directionalChance;
         public int hiddenMax;
         public float hiddenFraction;
@@ -99,6 +101,7 @@ public class GeneratorConfig
         public int maxRooms = 3;
         public float maxAreaFraction = 0.25f;
         public int minRoomsLeft = 3;
+        public int clusterSize = 2;
     }
     
     [Serializable]
@@ -109,6 +112,14 @@ public class GeneratorConfig
         public int directionalFromLevel = 31;
         public int lockedFromLevel = 36;
         public bool introduceAtUnlock = true;
+    }
+    
+    [Serializable]
+    public class GridAnchor
+    {
+        public int level;
+        public int minGrid;
+        public int maxGrid;
     }
 
     public int version;
@@ -122,6 +133,7 @@ public class GeneratorConfig
     public LimitSchedule limitSchedule = new LimitSchedule();
     public HoleSettings holes = new HoleSettings();
     public MechanicUnlocks mechanics = new MechanicUnlocks();
+    public GridAnchor[] gridCurve = new GridAnchor[0];
 
     public static bool TryParse(string json, out GeneratorConfig config, out string error)
     {
@@ -185,6 +197,16 @@ public class GeneratorConfig
             error = "mechanics: các mốc FromLevel phải >= 1";
             return false;
         }
+        
+        for (int i = 0; i < gridCurve.Length; i++)
+        {
+            GridAnchor a = gridCurve[i];
+            if (a.minGrid < 3 || a.maxGrid < a.minGrid) { error = $"gridCurve[{i}]: minGrid/maxGrid không hợp lệ"; return false; }
+            if (i > 0 && a.level <= gridCurve[i - 1].level) { error = "gridCurve phải sắp tăng dần theo level"; return false; }
+            if (i > 0 && (a.minGrid < gridCurve[i - 1].minGrid || a.maxGrid < gridCurve[i - 1].maxGrid))
+            { error = "gridCurve: minGrid/maxGrid không được giảm"; return false; }
+        }
+        if (holes.clusterSize < 1) { error = "holes.clusterSize phải >= 1"; return false; }
 
         error = null;
         return true;
@@ -198,6 +220,36 @@ public class GeneratorConfig
                 result = tier;
         
         return result;
+    }
+
+    public bool GetGridRange(int level, out int min, out int max)
+    {
+        min = max = 0;
+        if (gridCurve.Length == 0) return false;
+
+        if (level <= gridCurve[0].level)
+        {
+            min = gridCurve[0].minGrid;
+            max = gridCurve[0].maxGrid;
+            return true;
+        }
+
+        for (int i = 1; i < gridCurve.Length; i++)
+        {
+            if(level > gridCurve[i].level) continue;
+            
+            GridAnchor a = gridCurve[i - 1];
+            GridAnchor b = gridCurve[i];
+            double t = (level - a.level) / (double)(b.level - a.level);
+            min = (int)Math.Floor(a.minGrid + (b.minGrid - a.minGrid) * t + 0.5);
+            max = (int)Math.Floor(a.maxGrid + (b.maxGrid - a.maxGrid) * t + 0.5);
+            return true;
+        }
+
+        GridAnchor last = gridCurve[gridCurve.Length - 1];
+        min = last.minGrid;
+        max = last.maxGrid;
+        return true;
     }
 
     public int GetBand(int grid)

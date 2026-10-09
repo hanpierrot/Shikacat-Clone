@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "CatPalette", menuName = "Shikacat/Cat Palette")]
@@ -28,5 +29,12 @@ public class CatPalette : ScriptableObject
         
         entry = default;
         return false;
+    }
+    
+    public void GetColors(List<CatColor> buffer)
+    {
+        buffer.Clear();
+        foreach (var e in entries)
+            buffer.Add(e.color);
     }
 }
