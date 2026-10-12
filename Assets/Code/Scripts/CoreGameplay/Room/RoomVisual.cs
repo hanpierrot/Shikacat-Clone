@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
 
@@ -91,7 +92,15 @@ public class RoomVisual : MonoBehaviour
 
     private void CacheRenderers()
     {
-        renderers = GetComponentsInChildren<Renderer>(true);
+        var all = GetComponentsInChildren<Renderer>(true);
+        var list = new List<Renderer>();
+        foreach (Renderer r in all)
+        {
+            if (cat != null && r.transform.IsChildOf(cat.transform)) continue;
+            list.Add(r);
+        }
+        
+        renderers = list.ToArray();
         baseOrders = new int[renderers.Length];
         for (int i = 0; i < renderers.Length; i++)
             baseOrders[i] = renderers[i].sortingOrder;

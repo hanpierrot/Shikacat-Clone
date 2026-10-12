@@ -15,11 +15,16 @@ public class CatSkinSetter : MonoBehaviour
     [SerializeField] private float growTime = 0.15f;
     [SerializeField] private float jumpLift = 0.15f; 
     [SerializeField, Range(0.2f, 0.8f)] private float riseRatio = 0.45f;
+    [SerializeField] private int introOrderBoost = 100;
     
     private Sequence introSequence;
     private Vector3 restLocalPosition;
     private Vector3 restLocalScale;
     private bool restCached;
+    
+    private Renderer catRenderer;
+    private int baseSortingOrder;
+    private bool sortingCached;
 
     private void Reset()
     {
@@ -48,6 +53,8 @@ public class CatSkinSetter : MonoBehaviour
         string idle = IdleAnimations[Random.Range(0, IdleAnimations.Length)];
         spine.AnimationState.SetAnimation(0, idle, true);
         
+        SetClipping(!playIntro);
+        
         spine.Update(0);
         spine.LateUpdate();
 
@@ -57,6 +64,8 @@ public class CatSkinSetter : MonoBehaviour
 
     private void PlayIntro(string idle)
     {
+        SetSortingBoost(true);
+        
         string jump = JumpAnimations[Random.Range(0, JumpAnimations.Length)];
         Spine.Animation jumpData = spine.Skeleton.Data.FindAnimation(jump);
         float jumpDuration = jumpData != null ? Mathf.Max(0.2f, jumpData.Duration) : 0.5f;
@@ -88,9 +97,26 @@ public class CatSkinSetter : MonoBehaviour
         KillIntro();
         spine.AnimationState.ClearTracks();
     }
+
+    private void SetSortingBoost(bool boosted)
+    {
+        if (catRenderer == null) catRenderer = GetComponent<Renderer>();
+        if (catRenderer == null) return;
+
+        if (!sortingCached)
+        {
+            baseSortingOrder = catRenderer.sortingOrder;
+            sortingCached = true;
+        }
+
+        catRenderer.sortingOrder = baseSortingOrder + (boosted ? introOrderBoost : 0);
+    }
     
     private void ResetTransform()
     {
+        SetSortingBoost(false);
+        SetClipping(true);
+        
         if (!restCached) return;
         transform.localPosition = restLocalPosition;
         transform.localScale = restLocalScale;
@@ -100,6 +126,13 @@ public class CatSkinSetter : MonoBehaviour
     {
         if (introSequence != null && introSequence.IsActive())
             introSequence.Kill();
+    }
+    
+    private void SetClipping(bool clipped)
+    {
+        spine.maskInteraction = clipped
+            ? SpriteMaskInteraction.VisibleInsideMask
+            : SpriteMaskInteraction.None;
     }
 
     private void OnDisable()
