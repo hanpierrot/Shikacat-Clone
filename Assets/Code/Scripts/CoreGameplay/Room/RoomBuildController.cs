@@ -9,6 +9,12 @@ public class RoomBuildController : MonoBehaviour
     [SerializeField] private GridInputHandler inputHandler;
     [SerializeField] private RoomRemoveController roomRemoveController;
     
+    [Header("Preview Text")]
+    [SerializeField] private TMPro.TMP_Text previewAreaText;
+    [SerializeField, Range(0.02f, 0.3f)] private float previewTextOffset = 0.08f;
+    private const float PreviewTextScreenMargin = 40f; 
+    
+    [Header("Preview Overlay")]
     [SerializeField] private SpriteRenderer dragPreviewOverlay;
     [SerializeField] private Sprite validPreviewSprite;
     [SerializeField] private Sprite invalidPreviewSprite;
@@ -24,6 +30,7 @@ public class RoomBuildController : MonoBehaviour
     private readonly List<CatColor> colorBuffer = new List<CatColor>();
     private readonly List<CatColor> candidateBuffer = new List<CatColor>();
 
+    private Vector2 pointerScreenPosition;
     private int startRow, startCol;
     private int currentMinRow, currentMaxRow, currentMinCol, currentMaxCol;
     private bool isPressValid;
@@ -33,6 +40,7 @@ public class RoomBuildController : MonoBehaviour
     {
         if (inputHandler == null) inputHandler = GetComponent<GridInputHandler>();
         if (dragPreviewOverlay != null) dragPreviewOverlay.gameObject.SetActive(false);
+        if (previewAreaText != null) previewAreaText.gameObject.SetActive(false);
 
         if (roomVisualRoot != null)
         {
@@ -72,12 +80,22 @@ public class RoomBuildController : MonoBehaviour
         isPressValid = GridManager.Instance.WorldToGrid(world, out startRow, out startCol);
         if (!isPressValid) return;
 
+        if (GridManager.Instance.IsCellInPlacingRoom(startRow, startCol)) 
+        {
+            isPressValid = false;
+            return;
+        }
+        
+        pointerScreenPosition = screenPosition;
         SetPreviewBounds(startRow, startRow, startCol, startCol);
     }
     
     private void HandlePressMoved(Vector2 screenPosition)
     {
         if (!isPressValid || isResolving || IsInputLocked) return;
+        
+        pointerScreenPosition = screenPosition;
+        UpdateAreaTextPosition();
 
         Vector3 world = targetCamera.ScreenToWorldPoint(screenPosition);
         if (!GridManager.Instance.WorldToGrid(world, out int row, out int col)) return;
@@ -85,6 +103,19 @@ public class RoomBuildController : MonoBehaviour
         SetPreviewBounds(
             Mathf.Min(startRow, row), Mathf.Max(startRow, row),
             Mathf.Min(startCol, col), Mathf.Max(startCol, col));
+    }
+
+    private void UpdateAreaTextPosition()
+    {
+        if (previewAreaText == null) return;
+
+        Vector2 screen = pointerScreenPosition + Vector2.up * (Screen.height * previewTextOffset);
+        screen.x = Mathf.Clamp(screen.x, PreviewTextScreenMargin, Screen.width - PreviewTextScreenMargin);
+        screen.y = Mathf.Min(screen.y, Screen.height - PreviewTextScreenMargin);
+        
+        Vector3 world = targetCamera.ScreenToWorldPoint(screen);
+        world.z = previewAreaText.transform.position.z;
+        previewAreaText.transform.position = world;
     }
 
     private void HandlePressEnded(bool wasDrag)
@@ -124,6 +155,7 @@ public class RoomBuildController : MonoBehaviour
     private void FinishPress()
     {
         if (dragPreviewOverlay != null) dragPreviewOverlay.gameObject.SetActive(false);
+        if (previewAreaText != null) previewAreaText.gameObject.SetActive(false);
         ResetBounds();
         isPressValid = false;
     }
@@ -163,6 +195,15 @@ public class RoomBuildController : MonoBehaviour
         dragPreviewOverlay.transform.localScale = Vector3.one * scaleFactor;
         dragPreviewOverlay.sprite = overlaySprite;
         dragPreviewOverlay.size = size / scaleFactor;
+
+        if (previewAreaText != null)
+        {
+            int area = (currentMaxRow - currentMinRow + 1) * (currentMaxCol - currentMinCol + 1);
+            previewAreaText.text = area.ToString();
+            previewAreaText.gameObject.SetActive(true);
+            UpdateAreaTextPosition();
+        }
+        
         dragPreviewOverlay.gameObject.SetActive(true);
     }
 
@@ -186,9 +227,15 @@ public class RoomBuildController : MonoBehaviour
         
         float scaleFactor = GridManager.Instance.CellSize / referenceCellSize;
         panel.SetUp(center, size, entry.panelBoxSprite, entry.panelBoxWallSprite, scaleFactor);
-        panel.SetCat(room.Color);
+        panel.SetCat(null);
         panel.gameObject.SetActive(true);
         room.Visual = panel;
+        room.IsPlacing = true;
+        panel.PlayPlaceAnimation(() =>
+        {
+            room.IsPlacing = false;
+            panel.SetCat(room.Color);
+        });
     }
     
     private CatColor PickColor(Room room)
@@ -227,7 +274,7 @@ public class RoomBuildController : MonoBehaviour
     private void ReleaseRoomPanel(Room room)
     {
         if (room?.Visual == null) return;
-        room.Visual.SetCat(null);
+        room.Visual.Release();  
         room.Visual.gameObject.SetActive(false);
         room.Visual = null;
     }
@@ -244,6 +291,8 @@ public class RoomBuildController : MonoBehaviour
     {
         RoomCheckResult result = GridManager.Instance.CheckRoom(
             currentMinRow, currentMaxRow, currentMinCol, currentMaxCol, out clue);
-        return result == RoomCheckResult.Valid;
+        if (result != RoomCheckResult.Valid) return false;
+        
+        return !GridManager.Instance.OverlapsPlacingRoom(currentMinRow, currentMaxRow, currentMinCol, currentMaxCol);
     }
 }

@@ -1,3 +1,4 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -17,11 +18,14 @@ public class GameManager : MonoSingleton<GameManager>
     [SerializeField] private Sprite loseSprite;
     [SerializeField] private Button nextLevelButton;
     [SerializeField] private Button restartButton;
+    [SerializeField] private float winPanelDelay = 1.2f;
+    [SerializeField] private float losePanelDelay = 0.8f;
     
     public const string EditorStartLevelKey = "Shikacat.StartLevelIndex";
     
     private LevelData[] levels;
     private LevelData currentLevel;
+    private Coroutine gameOverRoutine;
     private int currentLevelIndex;
     private float timeRemaining;
     private int displayedSeconds = -1;
@@ -93,6 +97,12 @@ public class GameManager : MonoSingleton<GameManager>
         
         currentLevelIndex = Mathf.Clamp(index, 0, levels.Length - 1);
         currentLevel = levels[currentLevelIndex];
+
+        if (gameOverRoutine != null)
+        {
+            StopCoroutine(gameOverRoutine);
+            gameOverRoutine = null;
+        }
 
         isGameOver = false;
         timeRemaining = currentLevel.timeLimit;
@@ -172,11 +182,7 @@ public class GameManager : MonoSingleton<GameManager>
         if (isGameOver) return;
         isGameOver = true;
 
-        bool hasNext = HasNextLevel;
-        if (gameOverPanel != null) gameOverPanel.SetActive(true);
-        if (gameOverImage != null) gameOverImage.sprite = winSprite;
-        if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(hasNext);
-        if (restartButton != null) restartButton.gameObject.SetActive(!hasNext); 
+        ShowGameOverAfterDelay(true, winPanelDelay); 
     }
 
     private void HandleLose()
@@ -184,10 +190,25 @@ public class GameManager : MonoSingleton<GameManager>
         if (isGameOver) return;
         isGameOver = true;
 
+        ShowGameOverAfterDelay(true, losePanelDelay);
+    }
+    
+    private void ShowGameOverAfterDelay(bool win, float delay)
+    {
+        if (gameOverRoutine != null) StopCoroutine(gameOverRoutine);
+        gameOverRoutine = StartCoroutine(ShowGameOverRoutine(win, delay));
+    }
+
+    private IEnumerator ShowGameOverRoutine(bool win, float delay)
+    {
+        if (delay > 0f) yield return new WaitForSeconds(delay);
+        gameOverRoutine = null;
+
+        bool hasNext = HasNextLevel;
         if (gameOverPanel != null) gameOverPanel.SetActive(true);
-        if (gameOverImage != null) gameOverImage.sprite = loseSprite;
-        if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(false);
-        if (restartButton != null) restartButton.gameObject.SetActive(true);
+        if (gameOverImage != null) gameOverImage.sprite = win ? winSprite : loseSprite;
+        if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(win && hasNext);
+        if (restartButton != null) restartButton.gameObject.SetActive(!win || !hasNext);
     }
     
     public void LoadNextLevel()
@@ -197,7 +218,6 @@ public class GameManager : MonoSingleton<GameManager>
     
     public void RestartLevel()
     {
-        if (!HasNextLevel) return;
         LoadLevel(currentLevelIndex);
     }
 }

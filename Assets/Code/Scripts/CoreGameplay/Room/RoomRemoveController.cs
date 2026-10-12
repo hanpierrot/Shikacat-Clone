@@ -6,7 +6,7 @@ public class RoomRemoveController : MonoBehaviour
     {
         Cell cell = GridManager.Instance.GetCell(row, col);
         if (cell == null || cell.AssignedRoom == null) return false;
-
+        if (cell.AssignedRoom.IsPlacing) return false;
         GridManager.Instance.RemoveRoom(cell.AssignedRoom);
         return true;
     }

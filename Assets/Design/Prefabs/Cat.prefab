@@ -82,7 +82,7 @@ MeshRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 2
+  m_SortingOrder: 4
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!114 &2642076192771301767
 MonoBehaviour:
@@ -126,7 +126,7 @@ MonoBehaviour:
   physicsMovementRelativeTo: {fileID: 0}
   updateTiming: 1
   unscaledTime: 0
-  _animationName: front_idle1
+  _animationName: jump1
   loop: 1
   timeScale: 1
 --- !u!1 &8431494110418515195
@@ -175,4 +175,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   spine: {fileID: 2642076192771301767}
-  jumpOnSpawn: 1
+  playIntro: 1
+  growStartScale: 0
+  growTime: 0.15
+  jumpLift: 0.15
+  riseRatio: 0.45

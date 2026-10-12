@@ -6,6 +6,7 @@ public class Room : IRoomBounds
     public int MaxColumn { get; }
     public RoomVisual Visual { get; set; }
     public CatColor Color { get; set; }
+    public bool IsPlacing { get; set; }
     
     public Room(int minRow, int maxRow, int minColumn, int maxColumn)
     {
