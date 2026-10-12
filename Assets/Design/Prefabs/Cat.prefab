@@ -28,8 +28,8 @@ Transform:
   m_GameObject: {fileID: 7101304371254192885}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.036, y: -0.428, z: 0}
-  m_LocalScale: {x: 0.8, y: 0.8, z: 0.8}
+  m_LocalPosition: {x: 0.026, y: -0.25, z: 0}
+  m_LocalScale: {x: 0.4, y: 0.4, z: 0.4}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 1133835720098046630}
@@ -62,7 +62,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: b79afa373cdfc73438c34241c7fe3551, type: 2}
+  - {fileID: 2100000, guid: 055780b489931fb489c1e6e160715d44, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -82,7 +82,7 @@ MeshRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 2
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!114 &2642076192771301767
 MonoBehaviour:
@@ -113,10 +113,12 @@ MonoBehaviour:
   fixDrawOrder: 0
   addNormals: 0
   calculateTangents: 0
-  maskInteraction: 0
+  maskInteraction: 1
   maskMaterials:
-    materialsMaskDisabled: []
-    materialsInsideMask: []
+    materialsMaskDisabled:
+    - {fileID: 2100000, guid: b79afa373cdfc73438c34241c7fe3551, type: 2}
+    materialsInsideMask:
+    - {fileID: 2100000, guid: 055780b489931fb489c1e6e160715d44, type: 2}
     materialsOutsideMask: []
   disableRenderingOnOverride: 1
   physicsPositionInheritanceFactor: {x: 1, y: 1}
@@ -136,6 +138,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1133835720098046630}
+  - component: {fileID: 6586185150494403113}
   m_Layer: 0
   m_Name: Cat
   m_TagString: Untagged
@@ -159,3 +162,17 @@ Transform:
   - {fileID: 7266094700001072719}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6586185150494403113
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8431494110418515195}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b037a2fc2a526034e8c52d18d38c3a7b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  spine: {fileID: 2642076192771301767}
+  jumpOnSpawn: 1

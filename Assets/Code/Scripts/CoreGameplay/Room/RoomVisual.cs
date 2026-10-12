@@ -5,7 +5,7 @@ public class RoomVisual : MonoBehaviour
     private static readonly int WallTexId = Shader.PropertyToID("_WallTex");
     
     [SerializeField] private SpriteRenderer panel; 
-    [SerializeField] private SpriteRenderer cat;
+    [SerializeField] private CatSkinSetter cat;
     
     private MaterialPropertyBlock block;
     
@@ -14,8 +14,8 @@ public class RoomVisual : MonoBehaviour
         transform.position = center;
         transform.localScale = Vector3.one * scaleFactor;
 
-        panel.size = size / scaleFactor;
         panel.sprite = floorSprite;
+        panel.size = size / scaleFactor;
         
         block ??= new MaterialPropertyBlock();
         panel.GetPropertyBlock(block);
@@ -23,10 +23,18 @@ public class RoomVisual : MonoBehaviour
         panel.SetPropertyBlock(block);
     }
 
-    public void SetCat(Sprite catSprite)
+    public void SetCat(CatColor? color)
     {
         if (cat == null) return;
-        cat.sprite = catSprite;
-        cat.enabled = catSprite != null;
+
+        if (color == null)
+        {
+            cat.Clear();
+            cat.gameObject.SetActive(false);
+            return;
+        }
+        
+        cat.gameObject.SetActive(true);
+        cat.SetUp(color.Value);
     }
 }

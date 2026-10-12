@@ -161,8 +161,8 @@ public class RoomBuildController : MonoBehaviour
         float scaleFactor = GridManager.Instance.CellSize / referenceCellSize;
         dragPreviewOverlay.transform.position = center;
         dragPreviewOverlay.transform.localScale = Vector3.one * scaleFactor;
-        dragPreviewOverlay.size = size / scaleFactor;
         dragPreviewOverlay.sprite = overlaySprite;
+        dragPreviewOverlay.size = size / scaleFactor;
         dragPreviewOverlay.gameObject.SetActive(true);
     }
 
@@ -186,7 +186,7 @@ public class RoomBuildController : MonoBehaviour
         
         float scaleFactor = GridManager.Instance.CellSize / referenceCellSize;
         panel.SetUp(center, size, entry.panelBoxSprite, entry.panelBoxWallSprite, scaleFactor);
-        panel.SetCat(entry.catIconSprite);
+        panel.SetCat(room.Color);
         panel.gameObject.SetActive(true);
         room.Visual = panel;
     }

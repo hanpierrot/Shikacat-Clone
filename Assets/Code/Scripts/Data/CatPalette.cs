@@ -9,7 +9,6 @@ public class CatPalette : ScriptableObject
     public struct Entry
     {
         public CatColor color;
-        public Sprite catIconSprite;
         public Sprite panelBoxSprite;
         public Sprite panelBoxWallSprite;
     }
@@ -35,6 +34,7 @@ public class CatPalette : ScriptableObject
     {
         buffer.Clear();
         foreach (var e in entries)
-            buffer.Add(e.color);
+            if (Enum.IsDefined(typeof(CatColor), e.color))  
+                buffer.Add(e.color);
     }
 }
