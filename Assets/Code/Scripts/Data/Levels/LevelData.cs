@@ -11,6 +11,7 @@ public class LevelData
         public int col;
         public int value;
         public ClueType type;
+        public ClueShape shape; 
         public int unlockRoomCount;
     }
 
@@ -121,7 +122,14 @@ public class LevelData
                 return false;
             }
 
-            if (clue.type == ClueType.Square)
+            if (!Enum.IsDefined(typeof(ClueShape), clue.shape)) { error = $"clue ({clue.row},{clue.col}) có shape không tồn tại ({(int)clue.shape})"; return false; }
+            if (clue.shape != ClueShape.None && clue.type != ClueType.Locked && clue.type != ClueType.Hidden)
+            {
+                error = $"clue ({clue.row},{clue.col}) chỉ được kèm shape khi type là Locked hoặc Hidden";
+                return false;
+            }
+
+            if (RoomRules.GetShape(clue) == ClueShape.Square)
             {
                 int side = Mathf.RoundToInt(Mathf.Sqrt(clue.value));
                 if (side * side != clue.value)
@@ -208,9 +216,9 @@ public class LevelData
                 return false;
             }
 
-            if (!RoomRules.MatchesShape(expected.type, room.width, room.height))
+            if (!RoomRules.MatchesShape(RoomRules.GetShape(expected), room.width, room.height))   // Sửa
             {
-                error = $"solution[{i}] sai hình dạng so với loại clue {expected.type}";
+                error = $"solution[{i}] sai hình dạng so với clue ({expected.type}/{expected.shape})";
                 return false;
             }
         }

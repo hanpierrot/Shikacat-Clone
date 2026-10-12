@@ -298,6 +298,7 @@
       "holeMinGroups": 1,
       "holeMaxGroups": 1,
       "directionalChance": 0.25,
+      "comboChance": 0.2,
       "hiddenMax": 1,
       "hiddenFraction": 0.15,
       "lockedMax": 1,
@@ -318,6 +319,7 @@
       "holeMinGroups": 1, 
       "holeMaxGroups": 2,
       "directionalChance": 0.25,
+      "comboChance": 0.4,
       "hiddenMax": 4,
       "hiddenFraction": 0.15,
       "lockedMax": 2,
@@ -389,6 +391,7 @@
     "hiddenFromLevel": 26,
     "directionalFromLevel": 31,
     "lockedFromLevel": 36,
+    "comboFromLevel": 41,
     "introduceAtUnlock": true
   },
   "gridCurve": [

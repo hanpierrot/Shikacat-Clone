@@ -23,13 +23,26 @@ public class LevelManagerWindow : EditorWindow
     private Vector2 detailScroll;
     private GUIStyle cellLabelStyle;
     
-    private enum Brush { Select, Hole, Clue, Erase }
+    private enum Brush { Select, Hole, Room, Clue, Erase }
+    private enum Modifier { None, Locked, Hidden }
+    
+    private sealed class RoomDraft
+    {
+        public LevelData.SolutionRoom rect;
+        public LevelData.ClueEntry clue;
+    }
     
     private Brush brush = Brush.Clue;
-    private int brushValue = 2;
+    private Modifier brushModifier = Modifier.None;
+    private ClueShape brushShape = ClueShape.None;
     private ClueType brushType = ClueType.Normal;
     private int brushUnlockCount = 1;
     private (int row, int col) lastPaintCell = (-1, -1);
+    private bool draggingRoom; 
+    private (int row, int col) dragStart, dragCurrent;
+    private LevelData.SolutionRoom? pendingRoom;
+    private int pendingLevelIndex = -1;
+    private string statusMessage;
     private LevelSolver.Result solveResult;
     private int solvedLevelIndex = -1;
     private long solveMilliseconds;
@@ -163,6 +176,14 @@ public class LevelManagerWindow : EditorWindow
     {
         LevelData level = collection.levels[index];
         
+        if (pendingLevelIndex != index)
+        {
+            pendingLevelIndex = index;
+            pendingRoom = null;
+            draggingRoom = false;
+            statusMessage = null;
+        }
+        
         detailScroll = EditorGUILayout.BeginScrollView(detailScroll);
         EditorGUILayout.Space();
         EditorGUILayout.LabelField($"Level {index + 1}", EditorStyles.boldLabel);
@@ -189,9 +210,9 @@ public class LevelManagerWindow : EditorWindow
         EditorGUILayout.Space();
         DrawBrushPanel();
 
-        showSolution = EditorGUILayout.ToggleLeft("Show solution", showSolution);
+        showSolution = EditorGUILayout.ToggleLeft("Show room outlines", showSolution);
         DrawGrid(level);
-        EditorGUILayout.LabelField("Clues: value + H/V/S (shape), ? (hidden), L<n> (locked)", EditorStyles.miniLabel);
+        EditorGUILayout.LabelField("Room brush: drag a rectangle, then click a cell inside to place the clue. Clue text: value + H/V/S, ? (hidden), L<n> (locked)", EditorStyles.miniLabel); 
 
         DrawSolvePanel(index, level);
 
@@ -213,6 +234,7 @@ public class LevelManagerWindow : EditorWindow
 
         float cell = Mathf.Min(56f, 420f / level.columns, 420f / level.rows);
         Rect area = GUILayoutUtility.GetRect(cell * level.columns, cell * level.rows, GUILayout.ExpandWidth(false));
+        int[,] owner = BuildOwnerMap(level);
 
         for (int r = 0; r < level.rows; r++)
         {
@@ -227,6 +249,7 @@ public class LevelManagerWindow : EditorWindow
                 }
 
                 EditorGUI.DrawRect(rect, new Color(0.85f, 0.85f, 0.85f));
+                if (owner[r, c] >= 0) EditorGUI.DrawRect(rect, RoomTint(owner[r, c]));
 
                 if (level.TryGetClue(r, c, out LevelData.ClueEntry clue))
                 {
@@ -239,27 +262,73 @@ public class LevelManagerWindow : EditorWindow
         if (showSolution)
         {
             foreach (LevelData.SolutionRoom room in level.solution)
-            {
-                var rect = new Rect(area.x + room.col * cell, area.y + room.row * cell,
-                    room.width * cell - 2f, room.height * cell - 2f);
-                DrawOutline(rect, 2f, Color.black);
-            }
+                DrawRoomRect(area, cell, room, Color.black, 0f);
         }
 
-        HandleGridInput(level, area, cell); 
+        if (pendingRoom.HasValue) DrawRoomRect(area, cell, pendingRoom.Value, new Color(0.25f, 0.55f, 1f), 0.35f);
+        if (draggingRoom) DrawRoomRect(area, cell, DragRect(), new Color(0.3f, 0.8f, 0.4f), 0.35f);
+
+        HandleGridInput(level, area, cell);
+    }
+    
+    private static void DrawRoomRect(Rect area, float cell, LevelData.SolutionRoom room, Color color, float fillAlpha)
+    {
+        var rect = new Rect(area.x + room.col * cell, area.y + room.row * cell,
+            room.width * cell - 2f, room.height * cell - 2f);
+
+        if (fillAlpha > 0f)
+            EditorGUI.DrawRect(rect, new Color(color.r, color.g, color.b, fillAlpha));
+        DrawOutline(rect, 2f, color);
+    }
+
+    private static int[,] BuildOwnerMap(LevelData level)
+    {
+        var owner = new int[level.rows, level.columns];
+        for (int r = 0; r < level.rows; r++)
+        for (int c = 0; c < level.columns; c++)
+            owner[r, c] = -1;
+
+        for (int i = 0; i < level.solution.Length; i++)
+        {
+            LevelData.SolutionRoom room = level.solution[i];
+            for (int r = room.row; r < room.row + room.height && r < level.rows; r++)
+            for (int c = room.col; c < room.col + room.width && c < level.columns; c++)
+                owner[r, c] = i;
+        }
+        return owner;
+    }
+
+    private static Color RoomTint(int index)
+        => Color.HSVToRGB((index * 0.137f) % 1f, 0.25f, 0.95f);
+
+    private LevelData.SolutionRoom DragRect()
+    {
+        int minRow = Mathf.Min(dragStart.row, dragCurrent.row);
+        int minCol = Mathf.Min(dragStart.col, dragCurrent.col);
+        return new LevelData.SolutionRoom
+        {
+            row = minRow,
+            col = minCol,
+            height = Mathf.Abs(dragStart.row - dragCurrent.row) + 1,
+            width = Mathf.Abs(dragStart.col - dragCurrent.col) + 1
+        };
     }
     
     private static string ClueText(LevelData.ClueEntry clue)
     {
-        switch (clue.type)
+        string text = clue.value.ToString();
+
+        switch (RoomRules.GetShape(clue))
         {
-            case ClueType.Horizontal: return clue.value + "H";
-            case ClueType.Vertical: return clue.value + "V";
-            case ClueType.Square: return clue.value + "S";
-            case ClueType.Hidden: return clue.value + "?";
-            case ClueType.Locked: return clue.value + "L" + clue.unlockRoomCount;
-            default: return clue.value.ToString();
+            case ClueShape.Horizontal: text += "H"; break;
+            case ClueShape.Vertical: text += "V"; break;
+            case ClueShape.Square: text += "S"; break;
         }
+
+        if (clue.type == ClueType.Hidden) text += "?";
+        else if (clue.type == ClueType.Locked) text += "L" + clue.unlockRoomCount;
+
+        return text;
     }
     
     private static void DrawOutline(Rect rect, float thickness, Color color)
@@ -275,52 +344,88 @@ public class LevelManagerWindow : EditorWindow
     private void DrawResizeFields(LevelData level)
     {
         EditorGUI.BeginChangeCheck();
-        
+
         int newRows = Mathf.Clamp(EditorGUILayout.DelayedIntField("Rows", level.rows), 1, 20);
         int newCols = Mathf.Clamp(EditorGUILayout.DelayedIntField("Columns", level.columns), 1, 20);
-        
-        if(EditorGUI.EndChangeCheck() && (newRows != level.rows || newCols != level.columns))
+
+        if (EditorGUI.EndChangeCheck() && (newRows != level.rows || newCols != level.columns))
         {
+            bool consistent = level.solution.Length == level.clues.Length;
+            List<RoomDraft> rooms = consistent ? ReadRooms(level) : null;
+
             level.rows = newRows;
             level.columns = newCols;
-            level.clues = Array.FindAll(level.clues, c => c.row < newRows && c.col < newCols);
             level.holes = Array.FindAll(level.holes, h => h.row < newRows && h.col < newCols);
+
+            if (consistent)
+            {
+                rooms.RemoveAll(r => r.rect.row + r.rect.height > newRows || r.rect.col + r.rect.width > newCols);   // Bỏ phòng nằm ngoài lưới mới
+                WriteRooms(level, rooms);
+            }
+            else
+            {
+                level.clues = Array.FindAll(level.clues, c => c.row < newRows && c.col < newCols);
+                level.solution = Array.Empty<LevelData.SolutionRoom>();
+            }
+
+            pendingRoom = null;
             OnLevelEdited(level);
         }
     }
 
     private void DrawBrushPanel()
     {
-        brush = (Brush)GUILayout.Toolbar((int)brush, new[] { "Select", "Hole", "Clue", "Erase" });
-        if(brush != Brush.Clue) return;
+        brush = (Brush)GUILayout.Toolbar((int)brush, new[] { "Select", "Hole", "Room", "Clue", "Erase" });
 
-        using (new EditorGUILayout.HorizontalScope())
+        if (brush == Brush.Room || brush == Brush.Clue)
         {
-            brushValue = Mathf.Max(1, EditorGUILayout.IntField("Value", brushValue));
+            brushModifier = (Modifier)EditorGUILayout.EnumPopup("Modifier", brushModifier);
+            brushShape = (ClueShape)EditorGUILayout.EnumPopup("Shape", brushShape);
+            if (brushModifier == Modifier.Locked)
+                brushUnlockCount = Mathf.Max(1, EditorGUILayout.IntField("Rooms to unlock", brushUnlockCount));
         }
-        
-        brushType = (ClueType)EditorGUILayout.EnumPopup("Type", brushType);
-        if (brushType == ClueType.Locked)
-            brushUnlockCount = Mathf.Max(1, EditorGUILayout.IntField("Rooms to unlock", brushUnlockCount));
+
+        if (!string.IsNullOrEmpty(statusMessage))
+            EditorGUILayout.HelpBox(statusMessage, MessageType.Warning);
     }
     
     private void HandleGridInput(LevelData level, Rect area, float cell)
     {
         Event e = Event.current;
-        if(e.type == EventType.MouseUp)
+
+        if (e.type == EventType.MouseUp)
         {
             lastPaintCell = (-1, -1);
+            if (draggingRoom) 
+            {
+                FinishRoomDrag(level);
+                e.Use();
+            }
             return;
         }
-        
-        if(e.type != EventType.MouseDown && e.type != EventType.MouseDrag) return;
-        if (e.button != 0 || !area.Contains(e.mousePosition)) return;
-        
-        int col = (int)((e.mousePosition.x - area.x) / cell);
-        int row = (int)((e.mousePosition.y - area.y) / cell);
-        if (row < 0 || row >= level.rows || col < 0 || col >= level.columns) return;
-        
-        if (e.type == EventType.MouseDrag && brush != Brush.Hole && brush != Brush.Erase) return;
+
+        if (e.type != EventType.MouseDown && e.type != EventType.MouseDrag) return;
+        if (e.button != 0) return;
+
+        bool inside = area.Contains(e.mousePosition);
+        if (!inside && !draggingRoom) return;
+
+        int col = Mathf.Clamp((int)Mathf.Floor((e.mousePosition.x - area.x) / cell), 0, level.columns - 1); 
+        int row = Mathf.Clamp((int)Mathf.Floor((e.mousePosition.y - area.y) / cell), 0, level.rows - 1);
+
+        if (e.type == EventType.MouseDrag)
+        {
+            if (draggingRoom)
+            {
+                dragCurrent = (row, col);
+                Repaint();
+                e.Use();
+                return;
+            }
+
+            if (brush != Brush.Hole && brush != Brush.Erase) return;
+        }
+
         if (lastPaintCell == (row, col)) return;
         lastPaintCell = (row, col);
 
@@ -333,59 +438,253 @@ public class LevelManagerWindow : EditorWindow
         switch (brush)
         {
             case Brush.Select:
-                if (level.TryGetClue(row, col, out LevelData.ClueEntry picked))
+                foreach (RoomDraft draft in ReadRooms(level))
                 {
-                    brushValue = picked.value;
-                    brushType = picked.type;
-                    brushUnlockCount = Mathf.Max(1, picked.unlockRoomCount);
+                    if (!Contains(draft.rect, row, col)) continue;
+                    LoadBrushFromClue(draft.clue);
                     brush = Brush.Clue;
+                    break;
                 }
                 return;
-            
+
             case Brush.Hole:
-                if(level.IsHole(row, col)) RemoveHole(level, row, col);
+                if (level.IsHole(row, col)) RemoveHole(level, row, col);
                 else
                 {
-                    RemoveClue(level, row, col);
+                    RemoveRoomAt(level, row, col);
                     var holes = new List<LevelData.CellCoord>(level.holes)
                         { new LevelData.CellCoord { row = row, col = col } };
                     level.holes = holes.ToArray();
                 }
+                ClearPendingAt(row, col);
                 break;
-            
+
+            case Brush.Room:
+                HandleRoomPress(level, row, col);
+                return;
+
             case Brush.Clue:
-                RemoveHole(level, row, col);
-                RemoveClue(level, row, col);
-                var clues = new List<LevelData.ClueEntry>(level.clues)
-                {
-                    new LevelData.ClueEntry
-                    {
-                        row = row, col = col, value = brushValue, type = brushType,
-                        unlockRoomCount = brushType == ClueType.Locked ? brushUnlockCount : 0
-                    }
-                };
-                level.clues = clues.ToArray();
-                break;
-            
+                MoveClue(level, row, col);
+                return;
+
             case Brush.Erase:
-                RemoveClue(level, row, col);
-                RemoveHole(level, row, col);
+                if (level.IsHole(row, col)) RemoveHole(level, row, col);
+                else RemoveRoomAt(level, row, col);
+                ClearPendingAt(row, col);
                 break;
         }
-        
+
         OnLevelEdited(level);
     }
     
+    private void HandleRoomPress(LevelData level, int row, int col)
+    {
+        if (!EnsureRoomsAuthored(level)) return;
+        statusMessage = null;
+
+        if (pendingRoom.HasValue && Contains(pendingRoom.Value, row, col))
+        {
+            PlaceRoom(level, pendingRoom.Value, row, col);
+            return;
+        }
+
+        pendingRoom = null;
+        draggingRoom = true;
+        dragStart = dragCurrent = (row, col);
+        Repaint();
+    }
+
+    private void FinishRoomDrag(LevelData level)
+    {
+        draggingRoom = false;
+        LevelData.SolutionRoom rect = DragRect();
+
+        if (RectHasHole(level, rect))
+        {
+            statusMessage = "A room cannot cover a hole.";
+            Repaint();
+            return;
+        }
+
+        if (rect.width * rect.height == 1) 
+        {
+            PlaceRoom(level, rect, rect.row, rect.col);
+            return;
+        }
+
+        pendingRoom = rect;
+        Repaint();
+    }
+    
+    private void PlaceRoom(LevelData level, LevelData.SolutionRoom rect, int clueRow, int clueCol)
+    {
+        LevelData.ClueEntry clue = BuildClue(clueRow, clueCol, rect.width * rect.height);
+        if (!RoomRules.MatchesShape(RoomRules.GetShape(clue), rect.width, rect.height))
+        {
+            statusMessage = $"Shape {RoomRules.GetShape(clue)} does not fit a {rect.width}x{rect.height} room."; 
+            Repaint();
+            return;
+        }
+
+        List<RoomDraft> rooms = ReadRooms(level);
+        rooms.RemoveAll(r => Overlaps(r.rect, rect));
+        rooms.Add(new RoomDraft { rect = rect, clue = clue });
+        WriteRooms(level, rooms);
+
+        pendingRoom = null;
+        statusMessage = null;
+        OnLevelEdited(level);
+    }
+    
+    private void MoveClue(LevelData level, int row, int col)
+    {
+        if (!EnsureRoomsAuthored(level)) return;
+
+        List<RoomDraft> rooms = ReadRooms(level);
+        RoomDraft target = rooms.Find(r => Contains(r.rect, row, col));
+        if (target == null)
+        {
+            statusMessage = "Click a cell inside an existing room.";
+            Repaint();
+            return;
+        }
+
+        LevelData.ClueEntry clue = BuildClue(row, col, target.rect.width * target.rect.height);
+        if (!RoomRules.MatchesShape(RoomRules.GetShape(clue), target.rect.width, target.rect.height))
+        {
+            statusMessage = $"Shape {RoomRules.GetShape(clue)} does not fit a {target.rect.width}x{target.rect.height} room.";
+            Repaint();
+            return;
+        }
+
+        target.clue = clue;
+        statusMessage = null;
+        WriteRooms(level, rooms);
+        OnLevelEdited(level);
+    }
+    
+    private LevelData.ClueEntry BuildClue(int row, int col, int area)
+    {
+        var clue = new LevelData.ClueEntry { row = row, col = col, value = area };
+
+        if (brushModifier == Modifier.None)
+        {
+            switch (brushShape)
+            {
+                case ClueShape.Horizontal: clue.type = ClueType.Horizontal; break;
+                case ClueShape.Vertical: clue.type = ClueType.Vertical; break;
+                case ClueShape.Square: clue.type = ClueType.Square; break;
+                default: clue.type = ClueType.Normal; break;
+            }
+            return clue;
+        }
+
+        clue.type = brushModifier == Modifier.Locked ? ClueType.Locked : ClueType.Hidden;
+        clue.shape = brushShape;
+        if (brushModifier == Modifier.Locked) clue.unlockRoomCount = brushUnlockCount;
+        return clue;
+    }
+
+    private void LoadBrushFromClue(LevelData.ClueEntry clue)
+    {
+        brushModifier = Modifier.None;
+        brushShape = ClueShape.None;
+
+        switch (clue.type)
+        {
+            case ClueType.Horizontal: brushShape = ClueShape.Horizontal; break;
+            case ClueType.Vertical: brushShape = ClueShape.Vertical; break;
+            case ClueType.Square: brushShape = ClueShape.Square; break;
+            case ClueType.Locked:
+                brushModifier = Modifier.Locked;
+                brushShape = clue.shape;
+                brushUnlockCount = Mathf.Max(1, clue.unlockRoomCount);
+                break;
+            case ClueType.Hidden:
+                brushModifier = Modifier.Hidden;
+                brushShape = clue.shape;
+                break;
+        }
+    }
+    
+    
+    
     private static void RemoveHole(LevelData level, int row, int col)
         => level.holes = System.Array.FindAll(level.holes, h => !(h.row == row && h.col == col));
+    
+    private static List<RoomDraft> ReadRooms(LevelData level)
+    {
+        var rooms = new List<RoomDraft>();
+        foreach (LevelData.SolutionRoom s in level.solution)
+            if (s.clueIndex >= 0 && s.clueIndex < level.clues.Length)
+                rooms.Add(new RoomDraft { rect = s, clue = level.clues[s.clueIndex] });
+        return rooms;
+    }
 
+    private static void WriteRooms(LevelData level, List<RoomDraft> rooms)
+    {
+        rooms.Sort((a, b) => a.clue.row != b.clue.row ? a.clue.row.CompareTo(b.clue.row) : a.clue.col.CompareTo(b.clue.col));
+
+        level.clues = new LevelData.ClueEntry[rooms.Count];
+        level.solution = new LevelData.SolutionRoom[rooms.Count];
+        for (int i = 0; i < rooms.Count; i++)
+        {
+            level.clues[i] = rooms[i].clue;
+            LevelData.SolutionRoom room = rooms[i].rect;
+            room.clueIndex = i;
+            level.solution[i] = room;
+        }
+    }
+    
+    private static void RemoveRoomAt(LevelData level, int row, int col)
+    {
+        if (level.solution.Length != level.clues.Length)
+        {
+            RemoveClue(level, row, col);
+            level.solution = Array.Empty<LevelData.SolutionRoom>();
+            return;
+        }
+
+        List<RoomDraft> rooms = ReadRooms(level);
+        rooms.RemoveAll(r => Contains(r.rect, row, col));
+        WriteRooms(level, rooms);
+    }
+    
+    private bool EnsureRoomsAuthored(LevelData level)
+    {
+        if (level.solution.Length == level.clues.Length) return true;
+
+        statusMessage = "This level has clues without matching rooms. Use Solve > Write first solution, or Clear all rooms, before editing rooms.";
+        Repaint();
+        return false;
+    }
+
+    private void ClearPendingAt(int row, int col)
+    {
+        if (pendingRoom.HasValue && Contains(pendingRoom.Value, row, col))
+            pendingRoom = null;
+    }
+
+    private static bool Contains(LevelData.SolutionRoom r, int row, int col)
+        => row >= r.row && row < r.row + r.height && col >= r.col && col < r.col + r.width;
+
+    private static bool Overlaps(LevelData.SolutionRoom a, LevelData.SolutionRoom b)
+        => a.row < b.row + b.height && b.row < a.row + a.height
+                                    && a.col < b.col + b.width && b.col < a.col + a.width;
+
+    private static bool RectHasHole(LevelData level, LevelData.SolutionRoom rect)
+    {
+        for (int r = rect.row; r < rect.row + rect.height; r++)
+        for (int c = rect.col; c < rect.col + rect.width; c++)
+            if (level.IsHole(r, c)) return true;
+        return false;
+    }
+    
     private static void RemoveClue(LevelData level, int row, int col)
         => level.clues = System.Array.FindAll(level.clues, c => !(c.row == row && c.col == col));
     
     private void OnLevelEdited(LevelData level)
     {
-        level.solution = Array.Empty<LevelData.SolutionRoom>();
-        Array.Sort(level.clues, (a, b) => a.row != b.row ? a.row.CompareTo(b.row) : a.col.CompareTo(b.col));
         solveResult = null;
         dirty = true;
         RefreshValidation();
@@ -437,11 +736,15 @@ public class LevelManagerWindow : EditorWindow
             }
         }
 
-        if (GUILayout.Button("Clear solution"))
+        if (GUILayout.Button("Clear all rooms"))
         {
-            level.solution = System.Array.Empty<LevelData.SolutionRoom>();
-            dirty = true;
-            RefreshValidation();
+            if (EditorUtility.DisplayDialog("Clear all rooms", "Remove every room and clue of this level?", "Clear", "Cancel"))
+            {
+                level.clues = System.Array.Empty<LevelData.ClueEntry>();
+                level.solution = System.Array.Empty<LevelData.SolutionRoom>();
+                pendingRoom = null;
+                OnLevelEdited(level);
+            }
         }
     }
     
@@ -477,6 +780,7 @@ public class LevelManagerWindow : EditorWindow
             genOptions.EnableDirectional = EditorGUILayout.Toggle("Directional / Square", genOptions.EnableDirectional);
             genOptions.EnableHidden = EditorGUILayout.Toggle("Hidden", genOptions.EnableHidden);
             genOptions.EnableLocked = EditorGUILayout.Toggle("Locked", genOptions.EnableLocked);
+            genOptions.EnableCombo = EditorGUILayout.Toggle("Combo (shape + Locked/Hidden)", genOptions.EnableCombo);
             genOptions.IgnoreMechanicSchedule = EditorGUILayout.Toggle("Ignore mechanic unlock levels", genOptions.IgnoreMechanicSchedule);
 
             genOptions.OverrideGrid = EditorGUILayout.Toggle("Override grid size", genOptions.OverrideGrid);
@@ -637,7 +941,7 @@ public class LevelManagerWindow : EditorWindow
             if (info.Warning != null) warned++;
 
             sb.AppendLine($"#{info.LevelNumber} {info.TierName} {info.Grid}x{info.Grid} rooms={info.Rooms} holes={info.HoleRooms} " +
-                          $"dir={info.Directional} hid={info.Hidden} lock={info.Locked} {info.Mode} " +
+                          $"dir={info.Directional} hid={info.Hidden} lock={info.Locked} combo={info.Combo} {info.Mode} " +
                           $"{(info.Unique ? "unique" : "multi")} attempts={info.Attempts}{(info.Warning != null ? " !" : "")}");
         }
 
@@ -656,7 +960,7 @@ public class LevelManagerWindow : EditorWindow
             {
                 GeneratorConfig.Tier tier = config.tiers[t];
                 int count = batchPerTier;
-                int unique = 0, failed = 0, attempts = 0, rooms = 0, holeLevels = 0, directional = 0, hidden = 0, locked = 0;
+                int unique = 0, failed = 0, attempts = 0, rooms = 0, holeLevels = 0, directional = 0, hidden = 0, locked = 0, combo = 0;
                 var watch = System.Diagnostics.Stopwatch.StartNew();
 
                 for (int i = 0; i < count; i++)
@@ -678,6 +982,7 @@ public class LevelManagerWindow : EditorWindow
                     directional += info.Directional;
                     hidden += info.Hidden;
                     locked += info.Locked;
+                    combo += info.Combo;
                 }
 
                 watch.Stop();
@@ -686,7 +991,7 @@ public class LevelManagerWindow : EditorWindow
                 if (ok > 0)
                 {
                     sb.AppendLine($"  unique {unique}/{ok} ({100f * unique / ok:0}%), attempts avg {attempts / (float)ok:0.0}, rooms avg {rooms / (float)ok:0.0}");
-                    sb.AppendLine($"  levels with holes {holeLevels}, directional clues {directional}, hidden {hidden}, locked {locked}, {watch.ElapsedMilliseconds / (float)count:0} ms/level");
+                    sb.AppendLine($"  levels with holes {holeLevels}, directional clues {directional}, hidden {hidden}, locked {locked}, combo {combo}, {watch.ElapsedMilliseconds / (float)count:0} ms/level");
                 }
             }
         }

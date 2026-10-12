@@ -62,6 +62,7 @@ public class GeneratorConfig
         public int holeMinGroups = 1;
         public int holeMaxGroups = 1;
         public float directionalChance;
+        public float comboChance;
         public int hiddenMax;
         public float hiddenFraction;
         public int lockedMax;
@@ -111,6 +112,7 @@ public class GeneratorConfig
         public int hiddenFromLevel = 26;
         public int directionalFromLevel = 31;
         public int lockedFromLevel = 36;
+        public int comboFromLevel = 41;
         public bool introduceAtUnlock = true;
     }
     
@@ -192,10 +194,20 @@ public class GeneratorConfig
         
         if (mechanics.holesFromLevel < 1 || mechanics.hiddenFromLevel < 1
                                          || mechanics.directionalFromLevel < 1 
-                                         || mechanics.lockedFromLevel < 1)
+                                         || mechanics.lockedFromLevel < 1
+                                         || mechanics.comboFromLevel < 1)
         {
             error = "mechanics: các mốc FromLevel phải >= 1";
             return false;
+        }
+        
+        foreach (Tier tier in tiers)
+        {
+            if (tier.comboChance < 0f || tier.comboChance > 1f)
+            {
+                error = $"Tier {tier.name}: comboChance phải trong [0, 1]";
+                return false;
+            }
         }
         
         for (int i = 0; i < gridCurve.Length; i++)
