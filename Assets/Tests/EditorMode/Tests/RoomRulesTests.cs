@@ -275,4 +275,43 @@ public class RoomRulesTests
         level.solution = new[] { Sol(0, 0, 1, 1, 0), Sol(1, 0, 2, 1, 1) };
         Assert.IsFalse(level.Validate(out _));
     }
+    
+    [Test]
+    public void GetShape_ReadsShapeFromTypeOrFromModifier()
+    {
+        Assert.AreEqual(ClueShape.Horizontal, RoomRules.GetShape(Clue(0, 0, 4, ClueType.Horizontal)));
+
+        var hiddenSquare = Clue(0, 0, 4, ClueType.Hidden);
+        hiddenSquare.shape = ClueShape.Square;
+        Assert.AreEqual(ClueShape.Square, RoomRules.GetShape(hiddenSquare));
+        Assert.AreEqual(ClueShape.None, RoomRules.GetShape(Clue(0, 0, 4)));
+    }
+
+    [Test]
+    public void MatchesShape_UsesCombinedShape()
+    {
+        var lockedVertical = Clue(0, 0, 6, ClueType.Locked, 1);
+        lockedVertical.shape = ClueShape.Vertical;
+
+        Assert.IsTrue(RoomRules.MatchesShape(RoomRules.GetShape(lockedVertical), 2, 3));
+        Assert.IsFalse(RoomRules.MatchesShape(RoomRules.GetShape(lockedVertical), 3, 2));
+    }
+
+    [Test]
+    public void Validate_RejectsShapeOnTypeThatAlreadyHasOne()
+    {
+        var clue = Clue(0, 0, 4, ClueType.Horizontal);
+        clue.shape = ClueShape.Vertical;
+        var level = MakeLevel(2, 2, new[] { clue });
+        Assert.IsFalse(level.Validate(out _));
+    }
+
+    [Test]
+    public void Validate_RejectsHiddenSquareWithNonSquareValue()
+    {
+        var clue = Clue(0, 0, 6, ClueType.Hidden);
+        clue.shape = ClueShape.Square;
+        var level = MakeLevel(2, 3, new[] { clue });
+        Assert.IsFalse(level.Validate(out _));
+    }
 }

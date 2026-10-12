@@ -56,7 +56,7 @@ public class Cell : MonoBehaviour
         
         if(clueTypeIcon != null)
         {
-            Sprite icon = hasClue ? GetShapeIcon(ClueType) : null;
+            Sprite icon = hasClue ? GetShapeIcon(RoomRules.GetShape(clue)) : null;
             clueTypeIcon.enabled = icon != null;
             if (icon != null) clueTypeIcon.sprite = icon;
         }
@@ -64,13 +64,13 @@ public class Cell : MonoBehaviour
         RefreshLock(0, false);
     }
     
-    private Sprite GetShapeIcon(ClueType type)
+    private Sprite GetShapeIcon(ClueShape shape)
     {
-        switch (type)
+        switch (shape)
         {
-            case ClueType.Horizontal: return horizontalSprite;
-            case ClueType.Vertical: return verticalSprite;
-            case ClueType.Square: return squareSprite;
+            case ClueShape.Horizontal: return horizontalSprite;
+            case ClueShape.Vertical: return verticalSprite;
+            case ClueShape.Square: return squareSprite;
             default: return null;
         }
     }

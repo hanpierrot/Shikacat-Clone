@@ -4,7 +4,7 @@ using Random = System.Random;
 
 public sealed class GenerationOptions
 {
-    public int Seed = 12345;
+    public int Seed = 291204;
     public bool EnableHoles = true;
     public bool EnableDirectional = true;
     public bool EnableHidden = true;
@@ -15,6 +15,7 @@ public sealed class GenerationOptions
     public int MaxAttemptsPerLevel = 60;
     public int SolverNodeLimit = 200000;
     public bool IgnoreMechanicSchedule;
+    public bool EnableCombo = true;
 }
 
 public sealed class GenerationInfo
@@ -29,6 +30,7 @@ public sealed class GenerationInfo
     public int Directional;
     public int Hidden;
     public int Locked;
+    public int Combo;
     public int Grid;
     public string Warning;
 }
@@ -40,6 +42,7 @@ public static class LevelGenerator
         public int Row, Col, Width, Height;
         public int ClueRow, ClueCol;
         public ClueType Type;
+        public ClueShape ComboShape;
         public int UnlockCount;
     }
 
@@ -51,8 +54,8 @@ public static class LevelGenerator
     
     private struct ActiveMechanics
     {
-        public bool Holes, Hidden, Directional, Locked;
-        public bool ForceHoles, ForceHidden, ForceDirectional;
+        public bool Holes, Hidden, Directional, Locked, Combo;
+        public bool ForceHoles, ForceHidden, ForceDirectional, ForceCombo;
     }
 
     public static List<LevelData> GenerateRange(GeneratorConfig config, int fromLevel, int toLevel,
@@ -124,6 +127,7 @@ public static class LevelGenerator
             
             // Place ClueType
             AssignTypes(tier, mech, rng, plans);
+            if (mech.ForceCombo && !HasCombo(plans)) continue;
             
             // Build level, use solver, edit duplicate
             LevelData level = BuildLevel(config, tier, mode, plans, holes, grid, out List<RoomPlan> ordered);
@@ -132,7 +136,7 @@ public static class LevelGenerator
             
             for (int repair = 0; repair < tier.repairAttempts && solved.SolutionCount >= 2; repair++)
             {
-                if (!TryRepair(mech.Directional, rng, ordered, level, solved)) break;
+                if (!TryRepair(mech.Directional, mech.Combo, rng, ordered, level, solved)) break;
 
                 level = BuildLevel(config, tier, mode, plans, holes, grid, out ordered);
                 solved = LevelSolver.Solve(level, 2, options.SolverNodeLimit);
@@ -422,6 +426,7 @@ public static class LevelGenerator
         foreach (RoomPlan room in plans)
         {
             room.Type = ClueType.Normal;
+            room.ComboShape = ClueShape.None;
             room.UnlockCount = 0;
         }
 
@@ -447,7 +452,7 @@ public static class LevelGenerator
         if (mech.Hidden && tier.hiddenMax > 0 && free.Count > 0)
         {
             int cap = Math.Min(tier.hiddenMax, (int)Math.Ceiling(tier.hiddenFraction * plans.Count));
-            int count = Math.Min(Math.Max(mech.ForceHidden ? 1 : 0, rng.Next(0, cap + 1)), free.Count);
+            int count = Math.Min(Math.Max((mech.ForceHidden || mech.ForceCombo) ? 1 : 0, rng.Next(0, cap + 1)), free.Count);
 
             Shuffle(free, rng);
             for (int i = 0; i < count; i++) free[i].Type = ClueType.Hidden;
@@ -465,23 +470,67 @@ public static class LevelGenerator
                 assigned++;
             }
 
-            // Level giới thiệu: đảm bảo có ít nhất một clue hình dạng
             if (mech.ForceDirectional && assigned == 0 && free.Count > 0)
             {
                 RoomPlan room = free[rng.Next(free.Count)];
                 room.Type = PickDirectionalType(room, rng);
             }
         }
+        
+        // Combo Room
+        if (mech.Combo)
+        {
+            List<RoomPlan> modified = plans.FindAll(p => p.Type == ClueType.Locked || p.Type == ClueType.Hidden);
+            int comboCount = 0;
+
+            foreach (RoomPlan room in modified)
+            {
+                if (rng.NextDouble() >= tier.comboChance) continue;
+                room.ComboShape = PickShape(room, rng);
+                comboCount++;
+            }
+
+            if (mech.ForceCombo && comboCount == 0 && modified.Count > 0)
+            {
+                RoomPlan room = modified[rng.Next(modified.Count)];
+                room.ComboShape = PickShape(room, rng);
+            }
+        }
     }
     
-    private static ClueType PickDirectionalType(RoomPlan room, Random rng)
+    private static List<ClueShape> CompatibleShapes(RoomPlan room)
     {
-        var allowed = new List<ClueType>();
-        if (room.Width == room.Height) allowed.Add(ClueType.Square);
-        if (room.Width >= room.Height) allowed.Add(ClueType.Horizontal);
-        if (room.Height >= room.Width) allowed.Add(ClueType.Vertical);
+        var shapes = new List<ClueShape>();
+        if (room.Width == room.Height) shapes.Add(ClueShape.Square);
+        if (room.Width >= room.Height) shapes.Add(ClueShape.Horizontal);
+        if (room.Height >= room.Width) shapes.Add(ClueShape.Vertical);
+        return shapes;
+    }
 
-        return allowed[rng.Next(allowed.Count)];
+    private static ClueShape PickShape(RoomPlan room, Random rng)
+    {
+        List<ClueShape> shapes = CompatibleShapes(room);
+        return shapes[rng.Next(shapes.Count)];
+    }
+
+    private static ClueType ShapeToType(ClueShape shape)
+    {
+        switch (shape)
+        {
+            case ClueShape.Horizontal: return ClueType.Horizontal;
+            case ClueShape.Vertical: return ClueType.Vertical;
+            default: return ClueType.Square;
+        }
+    }
+
+    private static ClueType PickDirectionalType(RoomPlan room, Random rng)
+        => ShapeToType(PickShape(room, rng));   // Sửa: dùng chung PickShape
+
+    private static bool HasCombo(List<RoomPlan> plans)
+    {
+        foreach (RoomPlan room in plans)
+            if (room.ComboShape != ClueShape.None) return true;
+        return false;
     }
     
     private static ActiveMechanics ResolveMechanics(GeneratorConfig config, GenerationOptions options, int level)
@@ -490,16 +539,25 @@ public static class LevelGenerator
         bool useSchedule = !options.IgnoreMechanicSchedule;
         bool intro = useSchedule && unlocks.introduceAtUnlock;
 
+        bool hidden = options.EnableHidden && (!useSchedule || level >= unlocks.hiddenFromLevel);
+        bool directional = options.EnableDirectional && (!useSchedule || level >= unlocks.directionalFromLevel);
+        bool locked = options.EnableLocked && (!useSchedule || level >= unlocks.lockedFromLevel);
+
+        bool combo = options.EnableCombo && directional && (hidden || locked)
+                     && (!useSchedule || level >= unlocks.comboFromLevel);
+
         return new ActiveMechanics
         {
             Holes = options.EnableHoles && (!useSchedule || level >= unlocks.holesFromLevel),
-            Hidden = options.EnableHidden && (!useSchedule || level >= unlocks.hiddenFromLevel),
-            Directional = options.EnableDirectional && (!useSchedule || level >= unlocks.directionalFromLevel),
-            Locked = options.EnableLocked && (!useSchedule || level >= unlocks.lockedFromLevel),
+            Hidden = hidden,
+            Directional = directional,
+            Locked = locked,
+            Combo = combo,
 
             ForceHoles = intro && level == unlocks.holesFromLevel,
             ForceHidden = intro && level == unlocks.hiddenFromLevel,
-            ForceDirectional = intro && level == unlocks.directionalFromLevel
+            ForceDirectional = intro && level == unlocks.directionalFromLevel,
+            ForceCombo = combo && intro && level == unlocks.comboFromLevel
         };
     }
     
@@ -532,7 +590,8 @@ public static class LevelGenerator
                 col = plan.ClueCol,
                 value = plan.Width * plan.Height,
                 type = plan.Type,
-                unlockRoomCount = plan.Type == ClueType.Locked ? plan.UnlockCount : 0
+                unlockRoomCount = plan.Type == ClueType.Locked ? plan.UnlockCount : 0,
+                shape = (plan.Type == ClueType.Locked || plan.Type == ClueType.Hidden) ? plan.ComboShape : ClueShape.None
             };
             level.solution[i] = new LevelData.SolutionRoom
             {
@@ -571,7 +630,7 @@ public static class LevelGenerator
     private static float RoundToFive(double seconds) => (float)(Math.Max(15.0, Math.Round(seconds / 5.0) * 5.0));
     
     // Fix duplicated solution
-    private static bool TryRepair(bool allowDirectional, Random rng, List<RoomPlan> ordered,
+    private static bool TryRepair(bool allowDirectional, bool allowCombo, Random rng, List<RoomPlan> ordered,
         LevelData level, LevelSolver.Result solved)
     {
         LevelData.SolutionRoom[] alternative = null;
@@ -595,16 +654,23 @@ public static class LevelGenerator
         LevelData.SolutionRoom alt = alternative[index];
 
         // Cách 1: thêm ràng buộc hình dạng mà hình thật thoả còn hình thay thế thì không
-        if (allowDirectional && plan.Type == ClueType.Normal)
+        bool isModifier = plan.Type == ClueType.Locked || plan.Type == ClueType.Hidden;
+        bool canAddShape = plan.Type == ClueType.Normal
+            ? allowDirectional
+            : isModifier && allowCombo && plan.ComboShape == ClueShape.None;
+
+        if (canAddShape)
         {
-            var useful = new List<ClueType>();
-            if (plan.Width == plan.Height && alt.width != alt.height) useful.Add(ClueType.Square);
-            if (plan.Width >= plan.Height && alt.width < alt.height) useful.Add(ClueType.Horizontal);
-            if (plan.Height >= plan.Width && alt.height < alt.width) useful.Add(ClueType.Vertical);
+            var useful = new List<ClueShape>();
+            if (plan.Width == plan.Height && alt.width != alt.height) useful.Add(ClueShape.Square);
+            if (plan.Width >= plan.Height && alt.width < alt.height) useful.Add(ClueShape.Horizontal);
+            if (plan.Height >= plan.Width && alt.height < alt.width) useful.Add(ClueShape.Vertical);
 
             if (useful.Count > 0 && rng.NextDouble() < 0.6)
             {
-                plan.Type = useful[rng.Next(useful.Count)];
+                ClueShape shape = useful[rng.Next(useful.Count)];
+                if (plan.Type == ClueType.Normal) plan.Type = ShapeToType(shape);
+                else plan.ComboShape = shape;
                 return true;
             }
         }
@@ -661,6 +727,9 @@ public static class LevelGenerator
                 case ClueType.Hidden: info.Hidden++; break;
                 case ClueType.Locked: info.Locked++; break;
             }
+            
+            if ((clue.type == ClueType.Hidden || clue.type == ClueType.Locked) && clue.shape != ClueShape.None)
+                info.Combo++;
         }
 
         return info;

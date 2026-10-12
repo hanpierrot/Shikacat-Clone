@@ -74,9 +74,31 @@ public static class RoomRules
         
         int width = maxCol - minCol + 1;
         int height = maxRow - minRow + 1;
-        if (!MatchesShape(clue.type, width, height)) return RoomCheckResult.ShapeMismatch;
+        if (!MatchesShape(GetShape(clue), width, height)) return RoomCheckResult.ShapeMismatch;
         
         return RoomCheckResult.Valid;
+    }
+    
+    public static ClueShape GetShape(LevelData.ClueEntry clue)
+    {
+        switch (clue.type)
+        {
+            case ClueType.Horizontal: return ClueShape.Horizontal;
+            case ClueType.Vertical: return ClueShape.Vertical;
+            case ClueType.Square: return ClueShape.Square;
+            default: return clue.shape;
+        }
+    }
+
+    public static bool MatchesShape(ClueShape shape, int width, int height)
+    {
+        switch (shape)
+        {
+            case ClueShape.Horizontal: return width >= height;
+            case ClueShape.Vertical: return width <= height;
+            case ClueShape.Square: return width == height;
+            default: return true;
+        }
     }
     
     public static bool MatchesShape(ClueType type, int width, int height)

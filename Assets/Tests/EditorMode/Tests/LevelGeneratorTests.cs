@@ -180,6 +180,39 @@ public class LevelGeneratorTests
             Assert.LessOrEqual(info.Grid, max, $"Level {number}: grid quá lớn");
         }
     }
+    
+    [Test]
+    public void ComboClues_AppearOnlyFromUnlockLevelAndStayValid()
+    {
+        GeneratorConfig config = LoadConfig();
+        var options = new GenerationOptions { Seed = 7 };
+        int unlock = config.mechanics.comboFromLevel;
+
+        for (int number = 21; number < unlock; number++)
+        {
+            LevelData level = LevelGenerator.Generate(config, number, options, out _);
+            foreach (LevelData.ClueEntry clue in level.clues)
+                Assert.AreEqual(ClueShape.None, clue.shape, $"Level {number}: chưa mở clue kép");
+        }
+
+        LevelData intro = LevelGenerator.Generate(config, unlock, options, out _);
+        Assert.IsTrue(HasCombo(intro), $"Level {unlock} phải có clue kép");
+
+        for (int number = unlock; number < unlock + 20; number++)
+        {
+            LevelData level = LevelGenerator.Generate(config, number, options, out _);
+            Assert.IsNotNull(level, $"Level {number}");
+            Assert.IsTrue(level.Validate(out string error), $"Level {number}: {error}");
+        }
+    }
+
+    private static bool HasCombo(LevelData level)
+    {
+        foreach (LevelData.ClueEntry clue in level.clues)
+            if ((clue.type == ClueType.Hidden || clue.type == ClueType.Locked) && clue.shape != ClueShape.None)
+                return true;
+        return false;
+    }
 
     private static bool HasType(LevelData level, ClueType type)
     {
