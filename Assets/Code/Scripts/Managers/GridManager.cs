@@ -16,7 +16,6 @@ public class GridManager : MonoSingleton<GridManager>
     [Header("Layout")]
     [SerializeField] private Vector2 outerPadding = Vector2.zero;
     [SerializeField, Range(0f, 1f)] private float spacingRatio = 0.1f;
-    [SerializeField] private ClueTypeIcons clueTypeIcons;
 
     public event Action<Room> RoomRemoved;
     public event Action<Room> RoomCommitted;
@@ -72,9 +71,8 @@ public class GridManager : MonoSingleton<GridManager>
                 cell.gameObject.SetActive(true);
                 
                 bool hasClue = config.TryGetClue(r, c, out LevelData.ClueEntry clue);
-                Sprite typeIcon = hasClue && clueTypeIcons != null ? clueTypeIcons.Get(clue.type) : null;
                 
-                cell.Init(hasClue, clue, typeIcon);
+                cell.Init(hasClue, clue);
                 cells[r, c] = cell;
                 index++;
             }
@@ -214,6 +212,20 @@ public class GridManager : MonoSingleton<GridManager>
             for (int c = minCol; c <= maxCol; c++)
                 if (config.IsHole(r, c)) return true;
 
+        return false;
+    }
+    
+    public bool IsCellInPlacingRoom(int row, int col)
+    {
+        Cell cell = GetCell(row, col);
+        return cell != null && cell.AssignedRoom != null && cell.AssignedRoom.IsPlacing;
+    }
+
+    public bool OverlapsPlacingRoom(int minRow, int maxRow, int minCol, int maxCol)
+    {
+        foreach (Room room in rooms)
+            if (room.IsPlacing && room.Overlaps(minRow, maxRow, minCol, maxCol))
+                return true;
         return false;
     }
 
