@@ -1,6 +1,8 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 [RequireComponent(typeof(GridInputHandler))]
 public class RoomBuildController : MonoBehaviour
@@ -29,6 +31,9 @@ public class RoomBuildController : MonoBehaviour
     private readonly List<RoomVisual> roomPanelPool = new List<RoomVisual>();
     private readonly List<CatColor> colorBuffer = new List<CatColor>();
     private readonly List<CatColor> candidateBuffer = new List<CatColor>();
+    
+    public event Action PlacementFailed;
+    public event Action<Room> RoomAnimationFinished;
 
     private Vector2 pointerScreenPosition;
     private int startRow, startCol;
@@ -136,6 +141,9 @@ public class RoomBuildController : MonoBehaviour
 
         if (!TryValidateSelection(out _))
         {
+            if (!GridManager.Instance.OverlapsPlacingRoom(currentMinRow, currentMaxRow, currentMinCol, currentMaxCol))
+                PlacementFailed?.Invoke();
+            
             UpdatePreviewOverlay(invalidPreviewSprite);
             isResolving = true;
             StartCoroutine(ResolveAfterDelay());
@@ -212,6 +220,7 @@ public class RoomBuildController : MonoBehaviour
         if (roomPanelPrefab == null || catPalette == null)
         {
             Debug.LogWarning("RoomBuildController: thiếu roomPanelPrefab hoặc catPalette, phòng sẽ không có hình.");
+            RoomAnimationFinished?.Invoke(room);
             return;
         }
         
@@ -219,6 +228,7 @@ public class RoomBuildController : MonoBehaviour
         if (!catPalette.TryGet(room.Color, out var entry))
         {
             Debug.LogWarning($"RoomBuildController: CatPalette thiếu màu {room.Color}, phòng sẽ không có hình.");
+            RoomAnimationFinished?.Invoke(room);
             return;
         }
         
@@ -234,7 +244,7 @@ public class RoomBuildController : MonoBehaviour
         panel.PlayPlaceAnimation(() =>
         {
             room.IsPlacing = false;
-            panel.SetCat(room.Color);
+            panel.SetCat(room.Color, () => RoomAnimationFinished?.Invoke(room));
         });
     }
     

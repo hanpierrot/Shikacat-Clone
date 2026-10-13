@@ -39,7 +39,7 @@ public class CatSkinSetter : MonoBehaviour
         restCached = true;
     }
     
-    public void SetUp(CatColor color)
+    public void SetUp(CatColor color, System.Action onIntroFinished = null)
     {
         CacheRest();
         KillIntro();
@@ -58,11 +58,18 @@ public class CatSkinSetter : MonoBehaviour
         spine.Update(0);
         spine.LateUpdate();
 
-        if (playIntro) PlayIntro(idle);
-        else ResetTransform();
+        if (playIntro)
+        {
+            PlayIntro(idle, onIntroFinished);
+        }
+        else
+        {
+            ResetTransform();
+            onIntroFinished?.Invoke(); 
+        }
     }
 
-    private void PlayIntro(string idle)
+    private void PlayIntro(string idle, System.Action onFinished)
     {
         SetSortingBoost(true);
         
@@ -85,6 +92,7 @@ public class CatSkinSetter : MonoBehaviour
         });
         introSequence.Append(transform.DOLocalMoveY(restLocalPosition.y + jumpLift, riseTime).SetEase(Ease.OutQuad));
         introSequence.Append(transform.DOLocalMoveY(restLocalPosition.y, fallTime).SetEase(Ease.InQuad));
+        introSequence.OnComplete(() => onFinished?.Invoke());
         introSequence.OnKill(() =>
         {
             ResetTransform();

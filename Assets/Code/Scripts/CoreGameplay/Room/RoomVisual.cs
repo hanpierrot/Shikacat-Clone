@@ -75,9 +75,13 @@ public class RoomVisual : MonoBehaviour
         });
     }
 
-    public void SetCat(CatColor? color)
+    public void SetCat(CatColor? color, Action onIntroFinished = null)
     {
-        if (cat == null) return;
+        if (cat == null)
+        {
+            onIntroFinished?.Invoke();
+            return;
+        }
 
         if (color == null)
         {
@@ -87,7 +91,7 @@ public class RoomVisual : MonoBehaviour
         }
         
         cat.gameObject.SetActive(true);
-        cat.SetUp(color.Value);
+        cat.SetUp(color.Value, onIntroFinished);
     }
 
     private void CacheRenderers()

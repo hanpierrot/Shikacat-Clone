@@ -35,7 +35,6 @@ public class LevelManagerWindow : EditorWindow
     private Brush brush = Brush.Clue;
     private Modifier brushModifier = Modifier.None;
     private ClueShape brushShape = ClueShape.None;
-    private ClueType brushType = ClueType.Normal;
     private int brushUnlockCount = 1;
     private (int row, int col) lastPaintCell = (-1, -1);
     private bool draggingRoom; 

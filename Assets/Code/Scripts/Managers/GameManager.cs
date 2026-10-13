@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using TMPro;
 using UnityEngine;
@@ -8,8 +9,7 @@ public class GameManager : MonoSingleton<GameManager>
     [SerializeField] private TextAsset levelsJson;
     
     [Header("HUD")]
-    [SerializeField] private TMP_Text timerText;
-    [SerializeField] private TMP_Text moveLimitText;
+    [SerializeField] private LevelHud hud;
     
     [Header("Game Over Panel")]
     [SerializeField] private GameObject gameOverPanel;
@@ -22,6 +22,8 @@ public class GameManager : MonoSingleton<GameManager>
     [SerializeField] private float losePanelDelay = 0.8f;
     
     public const string EditorStartLevelKey = "Shikacat.StartLevelIndex";
+    
+    public event Action LevelLoaded;
     
     private LevelData[] levels;
     private LevelData currentLevel;
@@ -59,17 +61,17 @@ public class GameManager : MonoSingleton<GameManager>
     private void Update()
     {
         if (isGameOver || currentLevel == null || !currentLevel.HasTimeLimit) return;
-        
+
         timeRemaining -= Time.deltaTime;
         if (timeRemaining <= 0)
         {
             timeRemaining = 0;
-            UpdateTimerText();
+            UpdateTimeHud();
             HandleLose();
             return;
         }
-        
-        UpdateTimerText();
+
+        UpdateTimeHud();
     }
 
     private static int ConsumeEditorStartLevel()
@@ -116,28 +118,44 @@ public class GameManager : MonoSingleton<GameManager>
         GridManager.Instance.BuildGrid(currentLevel);
         isLoading = false; 
         
-        if (timerText != null) timerText.gameObject.SetActive(currentLevel.HasTimeLimit);
-        if (moveLimitText != null) moveLimitText.gameObject.SetActive(currentLevel.HasMoveLimit);
-        
+        if (hud != null) hud.Bind(currentLevelIndex + 1);
         displayedSeconds = -1;
-        UpdateTimerText();
-        UpdateMoveText();
+        UpdateLimitText();
+        
+        LevelLoaded?.Invoke();
     }
     
-    private void UpdateTimerText()
+    private void UpdateTimeHud()
     {
-        if (timerText == null) return;
+        if (hud == null) return;
+
+        hud.SetProgress(timeRemaining / currentLevel.timeLimit);
+        if (!currentLevel.HasMoveLimit) UpdateLimitText();
+    }
+
+    private void UpdateMovesHud()
+    {
+        if (hud == null) return;
+
+        if (!currentLevel.HasTimeLimit)
+            hud.SetProgress(movesRemaining / (float)currentLevel.moveLimit);
+        UpdateLimitText();
+    }
+    
+    private void UpdateLimitText()
+    {
+        if (hud == null || currentLevel == null) return;
+
+        if (currentLevel.HasMoveLimit)
+        {
+            hud.SetLimitText(movesRemaining.ToString());
+            return;
+        }
 
         int totalSeconds = Mathf.CeilToInt(timeRemaining);
         if (totalSeconds == displayedSeconds) return;
         displayedSeconds = totalSeconds;
-        timerText.text = $"{totalSeconds / 60:00}:{totalSeconds % 60:00}";
-    }
-    
-    private void UpdateMoveText()
-    {
-        if (moveLimitText == null) return;
-        moveLimitText.text = movesRemaining.ToString();
+        hud.SetLimitText($"{totalSeconds / 60:00}:{totalSeconds % 60:00}");
     }
 
     private void HandleRoomCommitted(Room room)
@@ -168,7 +186,7 @@ public class GameManager : MonoSingleton<GameManager>
         if (!currentLevel.HasMoveLimit) return;
 
         movesRemaining--;
-        UpdateMoveText();
+        UpdateMovesHud();
     }
 
     private void CheckMoveLimitLose()
@@ -190,7 +208,7 @@ public class GameManager : MonoSingleton<GameManager>
         if (isGameOver) return;
         isGameOver = true;
 
-        ShowGameOverAfterDelay(true, losePanelDelay);
+        ShowGameOverAfterDelay(false, losePanelDelay);
     }
     
     private void ShowGameOverAfterDelay(bool win, float delay)
