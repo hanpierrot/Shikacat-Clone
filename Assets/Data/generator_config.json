@@ -290,7 +290,7 @@
     },
     {
       "name": "Medium",
-      "fromLevel": 21,
+      "fromLevel": 6,
       "minGrid": 6,
       "maxGrid": 8,
       "rampLevels": 30,
@@ -311,7 +311,7 @@
     },
     {
       "name": "Hard",
-      "fromLevel": 51,
+      "fromLevel": 31,
       "minGrid": 8,
       "maxGrid": 12,
       "rampLevels": 50,
@@ -387,11 +387,11 @@
     "clusterSize": 2
   },
   "mechanics": {
-    "holesFromLevel": 21,
-    "hiddenFromLevel": 26,
-    "directionalFromLevel": 31,
-    "lockedFromLevel": 36,
-    "comboFromLevel": 41,
+    "holesFromLevel": 6,
+    "hiddenFromLevel": 8,
+    "directionalFromLevel": 10,
+    "lockedFromLevel": 13,
+    "comboFromLevel": 15,
     "introduceAtUnlock": true
   },
   "gridCurve": [

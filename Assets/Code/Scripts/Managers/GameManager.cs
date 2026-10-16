@@ -8,8 +8,17 @@ public class GameManager : MonoSingleton<GameManager>
 {
     [SerializeField] private TextAsset levelsJson;
     
+    [Header("Input")]
+    [SerializeField] private RoomBuildController buildController;
+    
     [Header("HUD")]
     [SerializeField] private LevelHud hud;
+    
+    [Header("Win FX")]
+    [SerializeField] private GameObject shotFx;
+    [SerializeField] private GameObject dropFx;
+    [SerializeField] private float roomAnimationTimeout = 3f;
+    [SerializeField] private float fxTimeout = 5f;
     
     [Header("Game Over Panel")]
     [SerializeField] private GameObject gameOverPanel;
@@ -18,8 +27,6 @@ public class GameManager : MonoSingleton<GameManager>
     [SerializeField] private Sprite loseSprite;
     [SerializeField] private Button nextLevelButton;
     [SerializeField] private Button restartButton;
-    [SerializeField] private float winPanelDelay = 1.2f;
-    [SerializeField] private float losePanelDelay = 0.8f;
     
     public const string EditorStartLevelKey = "Shikacat.StartLevelIndex";
     
@@ -34,7 +41,11 @@ public class GameManager : MonoSingleton<GameManager>
     private int movesRemaining;
     private bool isGameOver;
     private bool isLoading;
-
+    private bool timerRunning;
+    private Room winRoom;
+    private bool winRoomAnimated;
+    private bool useEditorStart;
+    
     public bool IsGameOver => isGameOver;
     
     private bool HasNextLevel => levels != null && currentLevelIndex + 1 < levels.Length;
@@ -43,24 +54,47 @@ public class GameManager : MonoSingleton<GameManager>
     {
         GridManager.Instance.RoomCommitted += HandleRoomCommitted;
         GridManager.Instance.RoomRemoved += HandleRoomRemoved;
+        if (buildController != null)
+        {
+            buildController.CellPressed += HandleCellPressed;
+            buildController.RoomAnimationFinished += HandleRoomAnimationFinished;
+        }
     }
 
     private void OnDisable()
     {
+        if (buildController != null)
+        {
+            buildController.CellPressed -= HandleCellPressed;
+            buildController.RoomAnimationFinished -= HandleRoomAnimationFinished;
+        }
         if (GridManager.Instance == null) return;
         GridManager.Instance.RoomCommitted -= HandleRoomCommitted;
         GridManager.Instance.RoomRemoved -= HandleRoomRemoved;
     }
 
+    protected override void Awake()
+    {
+        base.Awake();
+        Application.targetFrameRate = 60;
+        QualitySettings.vSyncCount = 0;
+    }
+
     private void Start()
     {
+        if (buildController == null)
+            Debug.LogWarning("GameManager: RoomBuildController NOT FOUND.");
+
         levels = LevelLoader.Load(levelsJson);
-        LoadLevel(ConsumeEditorStartLevel());
+
+        int editorIndex = ConsumeEditorStartLevel();
+        useEditorStart = editorIndex >= 0;
+        LoadLevel(useEditorStart ? editorIndex : PlayerProgress.LoadLevelIndex());
     }
 
     private void Update()
     {
-        if (isGameOver || currentLevel == null || !currentLevel.HasTimeLimit) return;
+        if (isGameOver || currentLevel == null || !currentLevel.HasTimeLimit || !timerRunning) return;
 
         timeRemaining -= Time.deltaTime;
         if (timeRemaining <= 0)
@@ -73,6 +107,11 @@ public class GameManager : MonoSingleton<GameManager>
 
         UpdateTimeHud();
     }
+    
+    private void HandleRoomAnimationFinished(Room room)
+    {
+        if (room == winRoom) winRoomAnimated = true;
+    }
 
     private static int ConsumeEditorStartLevel()
     {
@@ -84,7 +123,7 @@ public class GameManager : MonoSingleton<GameManager>
             return index;
         }
 #endif
-        return 0;
+        return -1;
     }
 
     public void LoadLevelAt(int index) => LoadLevel(index);
@@ -107,10 +146,15 @@ public class GameManager : MonoSingleton<GameManager>
         }
 
         isGameOver = false;
+        timerRunning = false;
         timeRemaining = currentLevel.timeLimit;
         movesRemaining = currentLevel.moveLimit;
 
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
+        if (shotFx != null) shotFx.SetActive(false);
+        if (dropFx != null) dropFx.SetActive(false);
+        winRoom = null;
+        winRoomAnimated = false;
         if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(false);
         if (restartButton != null) restartButton.gameObject.SetActive(false);
 
@@ -118,11 +162,17 @@ public class GameManager : MonoSingleton<GameManager>
         GridManager.Instance.BuildGrid(currentLevel);
         isLoading = false; 
         
-        if (hud != null) hud.Bind(currentLevelIndex + 1);
+        if (hud != null) hud.Bind(currentLevelIndex + 1, currentLevel.HasMoveLimit);
         displayedSeconds = -1;
         UpdateLimitText();
         
         LevelLoaded?.Invoke();
+    }
+    
+    private void HandleCellPressed()
+    {
+        if (timerRunning || isGameOver || isLoading || currentLevel == null) return;
+        timerRunning = true;
     }
     
     private void UpdateTimeHud()
@@ -166,7 +216,7 @@ public class GameManager : MonoSingleton<GameManager>
         
         if (GridManager.Instance.IsGridFull() && GridManager.Instance.AreAllRoomsCorrect())
         {
-            HandleWin();
+            HandleWin(room);
             return;
         }
 
@@ -195,12 +245,27 @@ public class GameManager : MonoSingleton<GameManager>
             HandleLose();
     }
 
-    private void HandleWin()
+    private void HandleWin(Room lastRoom)
     {
         if (isGameOver) return;
         isGameOver = true;
 
-        ShowGameOverAfterDelay(true, winPanelDelay); 
+        SaveProgress();
+
+        winRoom = lastRoom;
+        winRoomAnimated = false;
+
+        if (gameOverRoutine != null) StopCoroutine(gameOverRoutine);
+        gameOverRoutine = StartCoroutine(WinSequenceRoutine());
+    }
+    
+    private void SaveProgress()
+    {
+        if (useEditorStart) return;
+
+        int next = HasNextLevel ? currentLevelIndex + 1 : currentLevelIndex;
+        if (next > PlayerProgress.LoadLevelIndex())
+            PlayerProgress.SaveLevelIndex(next);
     }
 
     private void HandleLose()
@@ -208,25 +273,57 @@ public class GameManager : MonoSingleton<GameManager>
         if (isGameOver) return;
         isGameOver = true;
 
-        ShowGameOverAfterDelay(false, losePanelDelay);
+        ShowGameOverPanel(false);
+    }
+
+    private IEnumerator WinSequenceRoutine()
+    {
+        float waited = 0f;
+        while (!winRoomAnimated && waited < roomAnimationTimeout)
+        {
+            waited += Time.deltaTime;
+            yield return null;
+        }
+
+        if (shotFx != null)
+        {
+            shotFx.SetActive(true);
+            yield return null;
+            yield return WaitForParticles(shotFx, fxTimeout);
+        }
+
+        gameOverRoutine = null;
+        ShowGameOverPanel(true);
     }
     
-    private void ShowGameOverAfterDelay(bool win, float delay)
+    private void ShowGameOverPanel(bool win)
     {
-        if (gameOverRoutine != null) StopCoroutine(gameOverRoutine);
-        gameOverRoutine = StartCoroutine(ShowGameOverRoutine(win, delay));
-    }
-
-    private IEnumerator ShowGameOverRoutine(bool win, float delay)
-    {
-        if (delay > 0f) yield return new WaitForSeconds(delay);
-        gameOverRoutine = null;
-
         bool hasNext = HasNextLevel;
-        if (gameOverPanel != null) gameOverPanel.SetActive(true);
+
+        if (dropFx != null) dropFx.SetActive(win);
+        if (gameOverPanel != null) gameOverPanel.SetActive(true); 
         if (gameOverImage != null) gameOverImage.sprite = win ? winSprite : loseSprite;
         if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(win && hasNext);
         if (restartButton != null) restartButton.gameObject.SetActive(!win || !hasNext);
+    }
+    
+    private static IEnumerator WaitForParticles(GameObject fx, float timeout)
+    {
+        ParticleSystem[] systems = fx.GetComponentsInChildren<ParticleSystem>(true);
+        float elapsed = 0f;
+
+        while (elapsed < timeout && AnyAlive(systems))
+        {
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+    }
+
+    private static bool AnyAlive(ParticleSystem[] systems)
+    {
+        foreach (ParticleSystem s in systems)
+            if (s != null && s.IsAlive(false)) return true;
+        return false;
     }
     
     public void LoadNextLevel()

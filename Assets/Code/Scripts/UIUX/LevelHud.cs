@@ -17,14 +17,23 @@ public class LevelHud : MonoBehaviour
     [Header("Texts")]
     [SerializeField] private TMP_Text levelText;
     [SerializeField] private TMP_Text limitText;
+    [SerializeField] private Image limitIcon;
+    [SerializeField] private Sprite timeIconSprite;
+    [SerializeField] private Sprite movesIconSprite;
     [SerializeField] private string levelFormat = "Level {0}";
 
     private float[] thresholds;
     private bool[] lost;
     
-    public void Bind(int levelNumber)
+    public void Bind(int levelNumber, bool showsMoves)
     {
         if (levelText != null) levelText.text = string.Format(levelFormat, levelNumber);
+        
+        if (limitIcon != null)
+        {
+            Sprite icon = showsMoves ? movesIconSprite : timeIconSprite;
+            if (icon != null) limitIcon.sprite = icon;
+        }
 
         CacheThresholds();
 
@@ -43,7 +52,8 @@ public class LevelHud : MonoBehaviour
     public void SetProgress(float fraction)
     {
         fraction = Mathf.Clamp01(fraction);
-        if (progressBar != null) progressBar.fillAmount = fraction;
+        if (progressBar != null && Mathf.Abs(progressBar.fillAmount - fraction) >= 0.004f)
+            progressBar.fillAmount = fraction;
 
         for (int i = 0; i < stars.Length; i++)
         {

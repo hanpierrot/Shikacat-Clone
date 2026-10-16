@@ -56,9 +56,11 @@ public static class LevelLoader
         }
         
         LevelCollection collection = Parse(asset.text);
-        for(int i = 0; i < collection.levels.Length; i++)
-            if(!collection.levels[i].Validate(out string error))
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        for (int i = 0; i < collection.levels.Length; i++)
+            if (!collection.levels[i].Validate(out string error))
                 Debug.LogError($"LevelLoader: level {i + 1} invalid: {error}");
+#endif
 
         return collection.levels;
     }

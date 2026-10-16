@@ -26,6 +26,8 @@ public class RoomBuildController : MonoBehaviour
     [SerializeField] private float referenceCellSize = 1f;
     [SerializeField] private float invalidPreviewHoldDuration = 0.25f;
 
+    public Vector3 LastReleaseWorldPosition { get; private set; }
+    
     private static bool IsInputLocked => GameManager.Instance != null && GameManager.Instance.IsGameOver;
     
     private readonly List<RoomVisual> roomPanelPool = new List<RoomVisual>();
@@ -33,11 +35,16 @@ public class RoomBuildController : MonoBehaviour
     private readonly List<CatColor> candidateBuffer = new List<CatColor>();
     
     public event Action PlacementFailed;
-    public event Action<Room> RoomAnimationFinished;
+    public event Action<Room> RoomAnimationFinished; // remove if no one use
+    public event Action CellPressed;
 
+    private int shownMinRow = -1, shownMaxRow, shownMinCol, shownMaxCol;
+    private Sprite shownSprite;
+    
     private Vector2 pointerScreenPosition;
     private int startRow, startCol;
     private int currentMinRow, currentMaxRow, currentMinCol, currentMaxCol;
+    private int lastCellRow, lastCellCol; 
     private bool isPressValid;
     private bool isResolving;
 
@@ -91,6 +98,11 @@ public class RoomBuildController : MonoBehaviour
             return;
         }
         
+        CellPressed?.Invoke();
+        
+        lastCellRow = startRow;
+        lastCellCol = startCol;
+        
         pointerScreenPosition = screenPosition;
         SetPreviewBounds(startRow, startRow, startCol, startCol);
     }
@@ -104,6 +116,9 @@ public class RoomBuildController : MonoBehaviour
 
         Vector3 world = targetCamera.ScreenToWorldPoint(screenPosition);
         if (!GridManager.Instance.WorldToGrid(world, out int row, out int col)) return;
+        
+        lastCellRow = row;
+        lastCellCol = col;
 
         SetPreviewBounds(
             Mathf.Min(startRow, row), Mathf.Max(startRow, row),
@@ -170,8 +185,9 @@ public class RoomBuildController : MonoBehaviour
     
     private void TryCommitSelection()
     {
-        if (!TryValidateSelection(out LevelData.ClueEntry clue)) return;
-
+        if (!TryValidateSelection(out _)) return;
+        
+        LastReleaseWorldPosition = GridManager.Instance.GridToWorld(lastCellRow, lastCellCol);
         Room room = GridManager.Instance.CommitRoom(currentMinRow, currentMaxRow, currentMinCol, currentMaxCol);
         SpawnRoomPanel(room);
     }
@@ -195,6 +211,19 @@ public class RoomBuildController : MonoBehaviour
     private void UpdatePreviewOverlay(Sprite overlaySprite)
     {
         if (dragPreviewOverlay == null) return;
+
+        bool unchanged = overlaySprite == shownSprite
+                         && currentMinRow == shownMinRow && currentMaxRow == shownMaxRow
+                         && currentMinCol == shownMinCol && currentMaxCol == shownMaxCol
+                         && dragPreviewOverlay.gameObject.activeSelf;
+
+        UpdateAreaTextPosition();
+        
+        if (unchanged) return;
+
+        shownSprite = overlaySprite;
+        shownMinRow = currentMinRow; shownMaxRow = currentMaxRow;
+        shownMinCol = currentMinCol; shownMaxCol = currentMaxCol;
         
         GridManager.Instance.GetWorldRect(currentMinRow, currentMaxRow, currentMinCol, currentMaxCol, out Vector3 center, out Vector2 size);
         
