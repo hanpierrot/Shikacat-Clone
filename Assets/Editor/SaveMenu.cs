@@ -6,6 +6,7 @@ public static class SaveMenu
     private static void ClearSave()
     {
         PlayerProgress.Clear();
+        CoinWallet.Clear();
         UnityEngine.Debug.Log("Shikacat: đã xoá tiến độ đã lưu.");
     }
 }

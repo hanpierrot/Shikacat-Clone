@@ -48,8 +48,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   panel: {fileID: 4198604956134817875}
   cat: {fileID: 286853249569984559}
-  growStartScale: 0.85
-  growTime: 0.08
+  growStartScale: 0
+  growTime: 0.18
   liftHeight: 0.15
   hoverScale: 1.08
   hoverTime: 0.02
