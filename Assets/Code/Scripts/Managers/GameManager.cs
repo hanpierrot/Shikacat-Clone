@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -22,12 +23,13 @@ public class GameManager : MonoSingleton<GameManager>
     
     [Header("Game Over Panel")]
     [SerializeField] private GameObject gameOverPanel;
-    [SerializeField] private Image gameOverImage;
-    [SerializeField] private Sprite winSprite;
-    [SerializeField] private Sprite loseSprite;
     [SerializeField] private Button nextLevelButton;
     [SerializeField] private Button restartButton;
-    
+
+    [Header("Game Over Animation")]
+    [SerializeField] private WinAnimController winAnim;    // Spine thắng (WellDone, mèo, coin), nằm trong GameOverPanel
+    [SerializeField] private LoseAnimController loseAnim;  // Spine thua (LevelFail, TimeOut), nằm trong GameOverPanel
+
     public const string EditorStartLevelKey = "Shikacat.StartLevelIndex";
     
     public event Action LevelLoaded;
@@ -45,7 +47,8 @@ public class GameManager : MonoSingleton<GameManager>
     private Room winRoom;
     private bool winRoomAnimated;
     private bool useEditorStart;
-    
+    private bool lostByTimeOut;
+
     public bool IsGameOver => isGameOver;
     
     private bool HasNextLevel => levels != null && currentLevelIndex + 1 < levels.Length;
@@ -76,6 +79,7 @@ public class GameManager : MonoSingleton<GameManager>
     protected override void Awake()
     {
         base.Awake();
+        DOTween.SetTweensCapacity(200, 50);
         Application.targetFrameRate = 60;
         QualitySettings.vSyncCount = 0;
     }
@@ -101,7 +105,7 @@ public class GameManager : MonoSingleton<GameManager>
         {
             timeRemaining = 0;
             UpdateTimeHud();
-            HandleLose();
+            HandleLose(true);
             return;
         }
 
@@ -151,6 +155,8 @@ public class GameManager : MonoSingleton<GameManager>
         movesRemaining = currentLevel.moveLimit;
 
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
+        if (winAnim != null) winAnim.gameObject.SetActive(false);
+        if (loseAnim != null) loseAnim.gameObject.SetActive(false);
         if (shotFx != null) shotFx.SetActive(false);
         if (dropFx != null) dropFx.SetActive(false);
         winRoom = null;
@@ -268,11 +274,12 @@ public class GameManager : MonoSingleton<GameManager>
             PlayerProgress.SaveLevelIndex(next);
     }
 
-    private void HandleLose()
+    private void HandleLose(bool byTimeOut = false)
     {
         if (isGameOver) return;
         isGameOver = true;
 
+        lostByTimeOut = byTimeOut;
         ShowGameOverPanel(false);
     }
 
@@ -301,8 +308,15 @@ public class GameManager : MonoSingleton<GameManager>
         bool hasNext = HasNextLevel;
 
         if (dropFx != null) dropFx.SetActive(win);
-        if (gameOverPanel != null) gameOverPanel.SetActive(true); 
-        if (gameOverImage != null) gameOverImage.sprite = win ? winSprite : loseSprite;
+        
+        if (winAnim != null) winAnim.gameObject.SetActive(false);
+        if (loseAnim != null) loseAnim.gameObject.SetActive(false);
+        
+        if (gameOverPanel != null) gameOverPanel.SetActive(true);
+
+        if (win) { if (winAnim != null) winAnim.Play(); }
+        else if (loseAnim != null) loseAnim.Play(lostByTimeOut);
+
         if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(win && hasNext);
         if (restartButton != null) restartButton.gameObject.SetActive(!win || !hasNext);
     }

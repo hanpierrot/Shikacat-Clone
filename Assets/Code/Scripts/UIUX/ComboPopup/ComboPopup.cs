@@ -62,6 +62,24 @@ public class ComboPopup : MonoBehaviour
 
     private List<Effect>[] effects;
     
+    public bool PrewarmStep()
+    {
+        EnsureEffects();
+
+        for (int i = 0; i < effects.Length; i++)
+        {
+            List<Effect> list = effects[i];
+            if (list.Count == 0 || list.Count >= 2) continue;
+
+            GameObject source = list[0].Root;
+            GameObject clone = Instantiate(source, source.transform.parent);
+            list.Add(new Effect(clone));
+            return true;
+        }
+
+        return false;
+    }
+    
     private void EnsureEffects()
     {
         if (effects != null) return;

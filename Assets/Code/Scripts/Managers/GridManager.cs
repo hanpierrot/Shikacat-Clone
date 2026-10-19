@@ -26,9 +26,11 @@ public class GridManager : MonoSingleton<GridManager>
     private float step;
     private readonly List<Room> rooms = new List<Room>();
     private readonly List<Cell> cellPool = new List<Cell>();
+    private readonly List<Cell> lockedCells = new List<Cell>();
     
     public float CellSize => cellSize;
     public IReadOnlyList<Room> Rooms => rooms;
+    public int ClueCount => config != null ? config.clues.Length : 0;
     public bool IsReplacingRooms { get; private set; }
 
     public RoomCheckResult CheckRoom(int minRow, int maxRow, int minCol, int maxCol, out LevelData.ClueEntry clue)
@@ -40,6 +42,7 @@ public class GridManager : MonoSingleton<GridManager>
             RemoveRoom(rooms[i]);
         
         config = newLevel;
+        lockedCells.Clear();
         
         Vector2 visibleSize = CameraViewport.GetVisibleWorldSize(targetCamera);
         Vector2 boardSize = new Vector2(visibleSize.x * boardWidthPercent, visibleSize.y * boardHeightPercent);
@@ -73,6 +76,7 @@ public class GridManager : MonoSingleton<GridManager>
                 bool hasClue = config.TryGetClue(r, c, out LevelData.ClueEntry clue);
                 
                 cell.Init(hasClue, clue);
+                if (hasClue && clue.type == ClueType.Locked) lockedCells.Add(cell);
                 cells[r, c] = cell;
                 index++;
             }
@@ -231,10 +235,8 @@ public class GridManager : MonoSingleton<GridManager>
 
     private void RefreshLocks()
     {
-        if(cells == null) return;
-        
-        foreach (var cell in cells)
-            cell?.RefreshLock(rooms.Count);
+        foreach (Cell cell in lockedCells)
+            cell.RefreshLock(rooms.Count);
     }
     
     public bool AreAllRoomsCorrect() => RoomRules.AllRoomsCorrect(config, rooms);

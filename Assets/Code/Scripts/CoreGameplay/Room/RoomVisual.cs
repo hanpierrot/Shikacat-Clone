@@ -26,6 +26,21 @@ public class RoomVisual : MonoBehaviour
     private Renderer[] renderers;
     private int[] baseOrders;
     
+    public bool IsPrewarmed { get; private set; }
+
+    public void Prewarm(CatColor color)
+    {
+        if (cat != null)
+        {
+            cat.gameObject.SetActive(true);
+            cat.Prewarm(color);
+            cat.gameObject.SetActive(false);
+        }
+
+        IsPrewarmed = true;
+        gameObject.SetActive(false);
+    }
+    
     public void SetUp(Vector3 center, Vector2 size, Sprite floorSprite, Sprite wallSprite, float scaleFactor)
     {
         KillPlaceAnimation();

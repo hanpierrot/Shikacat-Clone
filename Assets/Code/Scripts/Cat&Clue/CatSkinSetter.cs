@@ -38,6 +38,24 @@ public class CatSkinSetter : MonoBehaviour
         restLocalScale = transform.localScale;
         restCached = true;
     }
+
+    public void Prewarm(CatColor color)
+    {
+        CacheRest();
+        if (!spine.valid) spine.Initialize(false);
+
+        spine.Skeleton.SetSkin(color.ToSkinName());
+        spine.Skeleton.SetSlotsToSetupPose();
+        
+        SetClipping(true);
+        spine.Update(0);
+        spine.LateUpdate();
+        
+        SetClipping(false);
+        spine.LateUpdate();
+        SetClipping(true);
+        spine.LateUpdate();
+    }
     
     public void SetUp(CatColor color, System.Action onIntroFinished = null)
     {

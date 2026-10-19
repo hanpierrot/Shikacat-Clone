@@ -10,6 +10,7 @@ public class RoomBuildController : MonoBehaviour
     [SerializeField] private Camera targetCamera;
     [SerializeField] private GridInputHandler inputHandler;
     [SerializeField] private RoomRemoveController roomRemoveController;
+    [SerializeField] private int maxPrewarmPanels = 16;
     
     [Header("Preview Text")]
     [SerializeField] private TMPro.TMP_Text previewAreaText;
@@ -47,6 +48,8 @@ public class RoomBuildController : MonoBehaviour
     private int lastCellRow, lastCellCol; 
     private bool isPressValid;
     private bool isResolving;
+    private Coroutine prewarmRoutine;
+
 
     private void Awake()
     {
@@ -69,6 +72,7 @@ public class RoomBuildController : MonoBehaviour
         inputHandler.PressMoved += HandlePressMoved;
         inputHandler.PressEnded += HandlePressEnded;
         GridManager.Instance.RoomRemoved += ReleaseRoomPanel;
+        GameManager.Instance.LevelLoaded += HandleLevelLoaded;
     }
 
     private void OnDisable()
@@ -78,6 +82,7 @@ public class RoomBuildController : MonoBehaviour
         inputHandler.PressEnded -= HandlePressEnded;
         if (GridManager.Instance != null)
             GridManager.Instance.RoomRemoved -= ReleaseRoomPanel;
+        if (GameManager.Instance != null) GameManager.Instance.LevelLoaded -= HandleLevelLoaded;
 
         StopAllCoroutines();
         isResolving = false;
@@ -168,6 +173,41 @@ public class RoomBuildController : MonoBehaviour
         TryCommitSelection();
         FinishPress();
     }
+    
+    private void HandleLevelLoaded()
+    {
+        if (prewarmRoutine != null) StopCoroutine(prewarmRoutine);
+        prewarmRoutine = StartCoroutine(PrewarmRoutine(Mathf.Min(GridManager.Instance.ClueCount, maxPrewarmPanels)));
+    }
+    
+    private IEnumerator PrewarmRoutine(int needed)
+    {
+        if (roomPanelPrefab == null || catPalette == null) yield break;
+
+        catPalette.GetColors(colorBuffer);
+        if (colorBuffer.Count == 0) yield break;
+        CatColor color = colorBuffer[0];
+
+        yield return null;
+
+        foreach (RoomVisual existing in roomPanelPool)
+        {
+            if (existing.IsPrewarmed || existing.gameObject.activeSelf) continue;
+            existing.Prewarm(color);
+            yield return null;
+        }
+
+        while (roomPanelPool.Count < needed)
+        {
+            RoomVisual panel = Instantiate(roomPanelPrefab, roomVisualRoot);
+            panel.Prewarm(color);
+            roomPanelPool.Add(panel);
+            yield return null;
+        }
+
+        prewarmRoutine = null;
+    }
+    
     private IEnumerator ResolveAfterDelay()
     {
         yield return new WaitForSeconds(invalidPreviewHoldDuration);
