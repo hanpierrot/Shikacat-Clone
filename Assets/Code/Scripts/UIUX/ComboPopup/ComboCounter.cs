@@ -11,6 +11,8 @@ public class ComboCounter : MonoBehaviour
     
     public int Combo { get; private set; }
     public event Action<int> ComboChanged;
+   
+    private Coroutine prewarmRoutine;
     
     private void OnEnable()
     {
@@ -45,7 +47,19 @@ public class ComboCounter : MonoBehaviour
     private void HandleLevelLoaded()
     {
         SetCombo(0);
-        if (popup != null) popup.Hide();
+        if (popup == null) return;
+
+        popup.Hide();
+        if (prewarmRoutine != null) StopCoroutine(prewarmRoutine);
+        prewarmRoutine = StartCoroutine(PrewarmRoutine());
+    }
+    
+    private IEnumerator PrewarmRoutine()
+    {
+        yield return null;
+        while (popup.PrewarmStep())
+            yield return null;
+        prewarmRoutine = null;
     }
 
     private void ResetCombo() => SetCombo(0);

@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -16,18 +17,24 @@ public class GameManager : MonoSingleton<GameManager>
     
     [Header("Win FX")]
     [SerializeField] private GameObject shotFx;
-    [SerializeField] private GameObject dropFx;
     [SerializeField] private float roomAnimationTimeout = 3f;
     [SerializeField] private float fxTimeout = 5f;
     
     [Header("Game Over Panel")]
     [SerializeField] private GameObject gameOverPanel;
-    [SerializeField] private Image gameOverImage;
-    [SerializeField] private Sprite winSprite;
-    [SerializeField] private Sprite loseSprite;
     [SerializeField] private Button nextLevelButton;
     [SerializeField] private Button restartButton;
+
+    [Header("Game Over Animation")]
+    [SerializeField] private WinAnimController winAnim;
+    [SerializeField] private LoseAnimController loseAnim;
     
+    [Header("Reward")]
+    [SerializeField] private CollectButton collectButton;
+    [SerializeField] private Button mainMenuButton;
+    [SerializeField] private int winCoinReward = 20;
+    [SerializeField] private CoinHud coinHud;
+
     public const string EditorStartLevelKey = "Shikacat.StartLevelIndex";
     
     public event Action LevelLoaded;
@@ -45,7 +52,8 @@ public class GameManager : MonoSingleton<GameManager>
     private Room winRoom;
     private bool winRoomAnimated;
     private bool useEditorStart;
-    
+    private bool lostByTimeOut;
+
     public bool IsGameOver => isGameOver;
     
     private bool HasNextLevel => levels != null && currentLevelIndex + 1 < levels.Length;
@@ -59,6 +67,7 @@ public class GameManager : MonoSingleton<GameManager>
             buildController.CellPressed += HandleCellPressed;
             buildController.RoomAnimationFinished += HandleRoomAnimationFinished;
         }
+        if (collectButton != null) collectButton.Collected += HandleRewardCollected;
     }
 
     private void OnDisable()
@@ -71,11 +80,13 @@ public class GameManager : MonoSingleton<GameManager>
         if (GridManager.Instance == null) return;
         GridManager.Instance.RoomCommitted -= HandleRoomCommitted;
         GridManager.Instance.RoomRemoved -= HandleRoomRemoved;
+        if (collectButton != null) collectButton.Collected -= HandleRewardCollected;
     }
 
     protected override void Awake()
     {
         base.Awake();
+        DOTween.SetTweensCapacity(200, 50);
         Application.targetFrameRate = 60;
         QualitySettings.vSyncCount = 0;
     }
@@ -101,7 +112,7 @@ public class GameManager : MonoSingleton<GameManager>
         {
             timeRemaining = 0;
             UpdateTimeHud();
-            HandleLose();
+            HandleLose(true);
             return;
         }
 
@@ -151,8 +162,11 @@ public class GameManager : MonoSingleton<GameManager>
         movesRemaining = currentLevel.moveLimit;
 
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
-        if (shotFx != null) shotFx.SetActive(false);
-        if (dropFx != null) dropFx.SetActive(false);
+        if (winAnim != null) winAnim.gameObject.SetActive(false);
+        if (loseAnim != null) loseAnim.gameObject.SetActive(false);
+        if (collectButton != null) collectButton.Hide();
+        if (coinHud != null) coinHud.Release(false);   // Phòng trường hợp chưa bấm Collect mà sang màn mới
+        if (mainMenuButton != null) mainMenuButton.gameObject.SetActive(false);
         winRoom = null;
         winRoomAnimated = false;
         if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(false);
@@ -251,6 +265,7 @@ public class GameManager : MonoSingleton<GameManager>
         isGameOver = true;
 
         SaveProgress();
+        GrantWinReward();
 
         winRoom = lastRoom;
         winRoomAnimated = false;
@@ -259,6 +274,15 @@ public class GameManager : MonoSingleton<GameManager>
         gameOverRoutine = StartCoroutine(WinSequenceRoutine());
     }
     
+    // Cộng và lưu coin ngay khi thắng; nút Collect chỉ chạy animation, HUD giữ số cũ tới lúc đó
+    private void GrantWinReward()
+    {
+        if (useEditorStart || winCoinReward <= 0) return;
+
+        if (coinHud != null) coinHud.HoldDisplay();
+        CoinWallet.Add(winCoinReward);
+    }
+
     private void SaveProgress()
     {
         if (useEditorStart) return;
@@ -268,11 +292,12 @@ public class GameManager : MonoSingleton<GameManager>
             PlayerProgress.SaveLevelIndex(next);
     }
 
-    private void HandleLose()
+    private void HandleLose(bool byTimeOut = false)
     {
         if (isGameOver) return;
         isGameOver = true;
 
+        lostByTimeOut = byTimeOut;
         ShowGameOverPanel(false);
     }
 
@@ -298,13 +323,37 @@ public class GameManager : MonoSingleton<GameManager>
     
     private void ShowGameOverPanel(bool win)
     {
+        if (winAnim != null) winAnim.gameObject.SetActive(false);
+        if (loseAnim != null) loseAnim.gameObject.SetActive(false);
+
+        if (gameOverPanel != null) gameOverPanel.SetActive(true);
+        
+        if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(false);
+        if (mainMenuButton != null) mainMenuButton.gameObject.SetActive(false);
+        if (restartButton != null) restartButton.gameObject.SetActive(!win);
+
+        if (win)
+        {
+            if (winAnim != null) winAnim.Play(winCoinReward);
+            else
+            {
+                if (coinHud != null) coinHud.Release(false);
+                HandleRewardCollected();
+            }
+        }
+        else if (loseAnim != null)
+        {
+            loseAnim.Play(lostByTimeOut);
+        }
+    }
+    
+    private void HandleRewardCollected()
+    {
         bool hasNext = HasNextLevel;
 
-        if (dropFx != null) dropFx.SetActive(win);
-        if (gameOverPanel != null) gameOverPanel.SetActive(true); 
-        if (gameOverImage != null) gameOverImage.sprite = win ? winSprite : loseSprite;
-        if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(win && hasNext);
-        if (restartButton != null) restartButton.gameObject.SetActive(!win || !hasNext);
+        if (mainMenuButton != null) mainMenuButton.gameObject.SetActive(true);
+        if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(hasNext);
+        if (restartButton != null) restartButton.gameObject.SetActive(!hasNext);
     }
     
     private static IEnumerator WaitForParticles(GameObject fx, float timeout)

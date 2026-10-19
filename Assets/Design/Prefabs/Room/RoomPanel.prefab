@@ -50,10 +50,10 @@ MonoBehaviour:
   cat: {fileID: 286853249569984559}
   growStartScale: 0
   growTime: 0.18
-  liftHeight: 0.3
+  liftHeight: 0.15
   hoverScale: 1.08
-  hoverTime: 0.08
-  dropTime: 0.14
+  hoverTime: 0.02
+  dropTime: 0.1
   landPunch: 0.08
   landPunchTime: 0.2
   animatingOrderBoost: 50
@@ -191,11 +191,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2642076192771301767, guid: 35e01158a3db90d41b8add948e11a783, type: 3}
       propertyPath: maskMaterials.materialsInsideMask.Array.size
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2642076192771301767, guid: 35e01158a3db90d41b8add948e11a783, type: 3}
       propertyPath: maskMaterials.materialsMaskDisabled.Array.size
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2642076192771301767, guid: 35e01158a3db90d41b8add948e11a783, type: 3}
       propertyPath: maskMaterials.materialsInsideMask.Array.data[0]
@@ -208,7 +208,7 @@ PrefabInstance:
     - target: {fileID: 5121330934412223002, guid: 35e01158a3db90d41b8add948e11a783, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
-      objectReference: {fileID: 2100000, guid: 055780b489931fb489c1e6e160715d44, type: 2}
+      objectReference: {fileID: 2100000, guid: b79afa373cdfc73438c34241c7fe3551, type: 2}
     - target: {fileID: 6653306208998902914, guid: 35e01158a3db90d41b8add948e11a783, type: 3}
       propertyPath: m_Mesh
       value: 
