@@ -71,7 +71,7 @@ public class CollectButton : MonoBehaviour
         Kill();
         sequence = DOTween.Sequence().SetTarget(transform);
 
-        sequence.Append(DOVirtual.Float(amount, 0f, countTime, v => amountText.text = $"x{Mathf.RoundToInt(v)}"));
+        sequence.AppendInterval(countTime);   // Giữ nguyên chữ "x20", chỉ chờ cho coin bay xong
         sequence.Join(transform.DOPunchScale(Vector3.one * 0.15f, countTime, 6, 0.6f));
 
         if (walletTarget != null && flyCoinTemplate != null)

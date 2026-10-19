@@ -18,7 +18,7 @@ public class GameManager : MonoSingleton<GameManager>
     [Header("Win FX")]
     [SerializeField] private GameObject shotFx;
     [SerializeField] private float roomAnimationTimeout = 3f;
-    [SerializeField] private float fxTimeout = 5f;
+    [SerializeField] private float panelDelayAfterShot = 0.3f;   // Bật GameOverPanel sau khi bật ShotFX khoảng này
     
     [Header("Game Over Panel")]
     [SerializeField] private GameObject gameOverPanel;
@@ -32,7 +32,8 @@ public class GameManager : MonoSingleton<GameManager>
     [Header("Reward")]
     [SerializeField] private CollectButton collectButton;
     [SerializeField] private Button mainMenuButton;
-    [SerializeField] private int winCoinReward = 20;
+    [SerializeField] private int[] starRewards = { 5, 10, 20 };   // Thưởng coin theo 1, 2, 3 sao
+    [SerializeField] private int minWinStars = 1;                 // Thắng luôn được ít nhất ngần này sao
     [SerializeField] private CoinHud coinHud;
 
     public const string EditorStartLevelKey = "Shikacat.StartLevelIndex";
@@ -52,6 +53,8 @@ public class GameManager : MonoSingleton<GameManager>
     private Room winRoom;
     private bool winRoomAnimated;
     private bool useEditorStart;
+    private int winStars;
+    private int winReward;
     private bool lostByTimeOut;
 
     public bool IsGameOver => isGameOver;
@@ -164,6 +167,7 @@ public class GameManager : MonoSingleton<GameManager>
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
         if (winAnim != null) winAnim.gameObject.SetActive(false);
         if (loseAnim != null) loseAnim.gameObject.SetActive(false);
+        if (shotFx != null) shotFx.SetActive(false);   // Tắt để lần thắng sau bật lại sẽ phát lại từ đầu
         if (collectButton != null) collectButton.Hide();
         if (coinHud != null) coinHud.Release(false);   // Phòng trường hợp chưa bấm Collect mà sang màn mới
         if (mainMenuButton != null) mainMenuButton.gameObject.SetActive(false);
@@ -265,6 +269,8 @@ public class GameManager : MonoSingleton<GameManager>
         isGameOver = true;
 
         SaveProgress();
+        winStars = Mathf.Clamp(hud != null ? hud.LitStars : 3, Mathf.Clamp(minWinStars, 1, 3), 3);
+        winReward = starRewards != null && starRewards.Length >= winStars ? starRewards[winStars - 1] : 0;
         GrantWinReward();
 
         winRoom = lastRoom;
@@ -277,10 +283,10 @@ public class GameManager : MonoSingleton<GameManager>
     // Cộng và lưu coin ngay khi thắng; nút Collect chỉ chạy animation, HUD giữ số cũ tới lúc đó
     private void GrantWinReward()
     {
-        if (useEditorStart || winCoinReward <= 0) return;
+        if (useEditorStart || winReward <= 0) return;
 
         if (coinHud != null) coinHud.HoldDisplay();
-        CoinWallet.Add(winCoinReward);
+        CoinWallet.Add(winReward);
     }
 
     private void SaveProgress()
@@ -313,8 +319,7 @@ public class GameManager : MonoSingleton<GameManager>
         if (shotFx != null)
         {
             shotFx.SetActive(true);
-            yield return null;
-            yield return WaitForParticles(shotFx, fxTimeout);
+            if (panelDelayAfterShot > 0f) yield return new WaitForSeconds(panelDelayAfterShot);   // Không chờ ShotFX chạy hết, panel mở sau ~0.3s
         }
 
         gameOverRoutine = null;
@@ -334,7 +339,7 @@ public class GameManager : MonoSingleton<GameManager>
 
         if (win)
         {
-            if (winAnim != null) winAnim.Play(winCoinReward);
+            if (winAnim != null) winAnim.Play(winReward, winStars);
             else
             {
                 if (coinHud != null) coinHud.Release(false);
@@ -354,25 +359,6 @@ public class GameManager : MonoSingleton<GameManager>
         if (mainMenuButton != null) mainMenuButton.gameObject.SetActive(true);
         if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(hasNext);
         if (restartButton != null) restartButton.gameObject.SetActive(!hasNext);
-    }
-    
-    private static IEnumerator WaitForParticles(GameObject fx, float timeout)
-    {
-        ParticleSystem[] systems = fx.GetComponentsInChildren<ParticleSystem>(true);
-        float elapsed = 0f;
-
-        while (elapsed < timeout && AnyAlive(systems))
-        {
-            elapsed += Time.deltaTime;
-            yield return null;
-        }
-    }
-
-    private static bool AnyAlive(ParticleSystem[] systems)
-    {
-        foreach (ParticleSystem s in systems)
-            if (s != null && s.IsAlive(false)) return true;
-        return false;
     }
     
     public void LoadNextLevel()

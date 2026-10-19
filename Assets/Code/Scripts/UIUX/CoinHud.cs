@@ -14,11 +14,12 @@ public class CoinHud : MonoBehaviour
 
     private bool held;                 // Đang giữ số hiển thị cũ vì phần thưởng chưa "nhận"
     private int displayed;
+    private int heldValue;            // Số dư trước khi cộng thưởng
     private Tween countTween;
 
     private void OnEnable()
     {
-        displayed = CoinWallet.Balance;
+        displayed = held ? heldValue : CoinWallet.Balance;   // Đang chờ nhận thưởng thì vẫn hiện số cũ
         Render(displayed);
 
         CoinWallet.Changed += HandleChanged;
@@ -36,6 +37,9 @@ public class CoinHud : MonoBehaviour
     public void HoldDisplay()
     {
         held = true;
+        heldValue = CoinWallet.Balance;
+        displayed = heldValue;
+        Render(displayed);
     }
 
     // Hiện đúng số dư. animate = true thì đếm lên dần

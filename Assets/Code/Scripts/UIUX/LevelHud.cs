@@ -75,6 +75,20 @@ public class LevelHud : MonoBehaviour
         }
     }
     
+    // Số sao còn sáng trên thanh tiến trình (dùng để tính thưởng khi thắng)
+    public int LitStars
+    {
+        get
+        {
+            if (lost == null) return stars.Length;
+
+            int count = 0;
+            for (int i = 0; i < lost.Length; i++)
+                if (!lost[i]) count++;
+            return count;
+        }
+    }
+
     public void SetLimitText(string text)
     {
         if (limitText != null) limitText.text = text;
