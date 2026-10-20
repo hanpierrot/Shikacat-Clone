@@ -58,7 +58,7 @@ public class LevelHud : MonoBehaviour
         for (int i = 0; i < stars.Length; i++)
         {
             bool isLost = fraction < thresholds[i];
-            if (isLost == lost[i]) continue;
+            if (!isLost || lost[i]) continue;   // Sao đã mất thì không lấy lại (kể cả khi hồi sinh làm limit tăng lên)
 
             lost[i] = isLost;
             if (stars[i] == null) continue;

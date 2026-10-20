@@ -11,6 +11,7 @@ public class CatPalette : ScriptableObject
         public CatColor color;
         public Sprite panelBoxSprite;
         public Sprite panelBoxWallSprite;
+        public Color decorColor;
     }
     
     [SerializeField] private Entry[] entries;

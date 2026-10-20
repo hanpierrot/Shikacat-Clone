@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a3576ba081aea743825bc9590d15661, type: 3}
+  m_Name: DecorSpritePool
+  m_EditorClassIdentifier: 
+  sprites:
+  - {fileID: 21300000, guid: ad6238e40dfc5b64ca1445254f96743c, type: 3}
+  - {fileID: 21300000, guid: 0f22a8d2186444f4ca965c55ff288ef6, type: 3}
+  - {fileID: 21300000, guid: 949a127db11e3f24f9c59219ee6c614a, type: 3}
+  - {fileID: 21300000, guid: 4178ae44a8766ab49a30f87da4d407fa, type: 3}
+  - {fileID: 21300000, guid: 8236c24fd12136c43b3f4b1bfd1a2418, type: 3}
+  - {fileID: 21300000, guid: d161b9f1d401811429d3bbf3d0cf8b08, type: 3}
+  - {fileID: 21300000, guid: 23f9047ae7403914bbb7b2c7b44967a4, type: 3}
+  - {fileID: 21300000, guid: 8c67c5bc89fc41f478a3fdbb8fdff7ea, type: 3}
+  - {fileID: 21300000, guid: f1a3779a7514faf4b8a582b2a17c79e8, type: 3}
+  - {fileID: 21300000, guid: d2d03cfae5381f94bb8aa924f4842d80, type: 3}
+  - {fileID: 21300000, guid: 90558e69f548f714a8edbfcc2a3caa24, type: 3}
+  - {fileID: 21300000, guid: bbceef8426d74a446a19140f408972f6, type: 3}
+  - {fileID: 21300000, guid: 1bcfbc2ad5d376f4c892dd12056f6868, type: 3}
+  - {fileID: 21300000, guid: 18acd20abdd201c46ab6e67ccc8c54aa, type: 3}
+  - {fileID: 21300000, guid: cb96b8cca8bb50045a41d5756d263ab0, type: 3}
+  - {fileID: 21300000, guid: ce8f207860b69784bb84c452371f6757, type: 3}

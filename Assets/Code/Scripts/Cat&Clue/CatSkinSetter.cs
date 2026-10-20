@@ -26,6 +26,11 @@ public class CatSkinSetter : MonoBehaviour
     private int baseSortingOrder;
     private bool sortingCached;
 
+    private void OnDisable()
+    {
+        KillIntro();
+    }
+
     private void Reset()
     {
         spine = GetComponent<SkeletonAnimation>();
@@ -45,7 +50,7 @@ public class CatSkinSetter : MonoBehaviour
         if (!spine.valid) spine.Initialize(false);
 
         spine.Skeleton.SetSkin(color.ToSkinName());
-        spine.Skeleton.SetSlotsToSetupPose();
+        spine.Skeleton.SetToSetupPose();
         
         SetClipping(true);
         spine.Update(0);
@@ -65,8 +70,8 @@ public class CatSkinSetter : MonoBehaviour
         if (!spine.valid) spine.Initialize(false);
 
         spine.Skeleton.SetSkin(color.ToSkinName());
-        spine.Skeleton.SetSlotsToSetupPose();
         spine.AnimationState.ClearTracks();
+        spine.Skeleton.SetToSetupPose();
 
         string idle = IdleAnimations[Random.Range(0, IdleAnimations.Length)];
         spine.AnimationState.SetAnimation(0, idle, true);
@@ -122,6 +127,7 @@ public class CatSkinSetter : MonoBehaviour
     {
         KillIntro();
         spine.AnimationState.ClearTracks();
+        if (spine.valid) spine.Skeleton.SetToSetupPose();
     }
 
     private void SetSortingBoost(bool boosted)
@@ -159,10 +165,5 @@ public class CatSkinSetter : MonoBehaviour
         spine.maskInteraction = clipped
             ? SpriteMaskInteraction.VisibleInsideMask
             : SpriteMaskInteraction.None;
-    }
-
-    private void OnDisable()
-    {
-        KillIntro();
     }
 }
