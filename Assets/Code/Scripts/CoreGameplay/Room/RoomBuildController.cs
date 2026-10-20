@@ -26,6 +26,10 @@ public class RoomBuildController : MonoBehaviour
     [SerializeField] private CatPalette catPalette;
     [SerializeField] private float referenceCellSize = 1f;
     [SerializeField] private float invalidPreviewHoldDuration = 0.25f;
+    
+    [Header("Decor")]
+    [SerializeField] private DecorPool decorPool;
+    [SerializeField] private DecorSpritePool decorSprites;
 
     public Vector3 LastReleaseWorldPosition { get; private set; }
     
@@ -34,6 +38,7 @@ public class RoomBuildController : MonoBehaviour
     private readonly List<RoomVisual> roomPanelPool = new List<RoomVisual>();
     private readonly List<CatColor> colorBuffer = new List<CatColor>();
     private readonly List<CatColor> candidateBuffer = new List<CatColor>();
+    private readonly List<Vector2> decorCells = new List<Vector2>();
     
     public event Action PlacementFailed;
     public event Action<Room> RoomAnimationFinished; // remove if no one use
@@ -306,6 +311,18 @@ public class RoomBuildController : MonoBehaviour
         
         float scaleFactor = GridManager.Instance.CellSize / referenceCellSize;
         panel.SetUp(center, size, entry.panelBoxSprite, entry.panelBoxWallSprite, scaleFactor);
+        
+        decorCells.Clear();
+        for (int r = room.MinRow; r <= room.MaxRow; r++)
+        {
+            for (int c = room.MinColumn; c <= room.MaxColumn; c++)
+            {
+                Vector3 world = GridManager.Instance.GridToWorld(r, c);
+                decorCells.Add((world - center) / scaleFactor);
+            }
+        }
+        panel.SetDecor(decorPool, decorSprites, entry.decorColor, decorCells, referenceCellSize);
+        
         panel.SetCat(null);
         panel.gameObject.SetActive(true);
         room.Visual = panel;

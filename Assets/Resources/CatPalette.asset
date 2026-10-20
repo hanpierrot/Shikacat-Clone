@@ -16,30 +16,40 @@ MonoBehaviour:
   - color: 0
     panelBoxSprite: {fileID: 616854572, guid: 852082236852399469c25957dbe0ab85, type: 3}
     panelBoxWallSprite: {fileID: 21300000, guid: 84338da484d79e744a592c26364652ab, type: 3}
+    decorColor: {r: 0.1764706, g: 0.43921572, b: 0.8941177, a: 1}
   - color: 1
     panelBoxSprite: {fileID: -1157654998, guid: 3d3bfea1e393dda4c82a1d328d659f62, type: 3}
     panelBoxWallSprite: {fileID: 21300000, guid: 83e03e1020ae5c94ea1f31689fba7ab9, type: 3}
+    decorColor: {r: 0.8196079, g: 0.16862746, b: 0.16862746, a: 1}
   - color: 2
     panelBoxSprite: {fileID: 387519324, guid: fd1913ac9c0b74343bb7405b3838dda7, type: 3}
     panelBoxWallSprite: {fileID: 21300000, guid: b6ba7c67d0a1cbb41a2430f43bd5d99b, type: 3}
+    decorColor: {r: 0.13333334, g: 0.68235296, b: 0.13333334, a: 1}
   - color: 3
     panelBoxSprite: {fileID: -200411419, guid: fd5fdd6ed8df8b044a74782ad55030a0, type: 3}
     panelBoxWallSprite: {fileID: 21300000, guid: 67f3143994ade014bb27d49e9b5d35b7, type: 3}
+    decorColor: {r: 0.7960785, g: 0.2392157, b: 0.7686275, a: 1}
   - color: 4
     panelBoxSprite: {fileID: -976642638, guid: 75a5dbcdcd6e6f84caf6959f39acc5a1, type: 3}
     panelBoxWallSprite: {fileID: 21300000, guid: 5d79a0097880edc4090a3a1d252131e4, type: 3}
+    decorColor: {r: 0.5411765, g: 0.26666668, b: 0.8470589, a: 1}
   - color: 5
     panelBoxSprite: {fileID: 1853913207, guid: f2d864cb164b1ee43bf7800fdc1f1d65, type: 3}
     panelBoxWallSprite: {fileID: 21300000, guid: 2eab32c0fda763e4087778d9ccc68ef7, type: 3}
+    decorColor: {r: 0.14117648, g: 0.627451, b: 0.58431375, a: 1}
   - color: 12
     panelBoxSprite: {fileID: -499242267, guid: 7cd8867c2868e6247b98f131ed502473, type: 3}
     panelBoxWallSprite: {fileID: 21300000, guid: 963f2d1dafe882046bfdca65aa121db6, type: 3}
+    decorColor: {r: 0.8000001, g: 0.8000001, b: 0.8000001, a: 1}
   - color: 7
     panelBoxSprite: {fileID: -414600989, guid: 11361a3c04f60544287318e290ef3e03, type: 3}
     panelBoxWallSprite: {fileID: 21300000, guid: bc826aeede095fe4cb59ecf5cc46cb7b, type: 3}
+    decorColor: {r: 0.42352945, g: 0.64705884, b: 0.0627451, a: 1}
   - color: 8
     panelBoxSprite: {fileID: 11059330, guid: cae2f0ba33b901e4cb4d1e188c58c6d4, type: 3}
     panelBoxWallSprite: {fileID: 21300000, guid: 9d869239f59268a4f85f59a420b831db, type: 3}
+    decorColor: {r: 0.8705883, g: 0.5411765, b: 0.21960786, a: 1}
   - color: 9
     panelBoxSprite: {fileID: 741547204, guid: c0e20179196b6a24680f055153a849f4, type: 3}
     panelBoxWallSprite: {fileID: 21300000, guid: 46bdf01cff4ea1f40b35d990cb7fe9e4, type: 3}
+    decorColor: {r: 0.72156864, g: 0.6784314, b: 0.043137256, a: 1}

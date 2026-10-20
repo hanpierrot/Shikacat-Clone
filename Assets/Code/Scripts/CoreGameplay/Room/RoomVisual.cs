@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
+using UnityEngine.Rendering;
+using Random = UnityEngine.Random;
 
 public class RoomVisual : MonoBehaviour
 {
@@ -9,6 +11,14 @@ public class RoomVisual : MonoBehaviour
     
     [SerializeField] private SpriteRenderer panel; 
     [SerializeField] private CatSkinSetter cat;
+    
+    [Header("Decor")]
+    [SerializeField] private Transform decorRoot;
+    [SerializeField] private SortingGroup decorGroup; 
+    [SerializeField] private int maxDecorPerRoom = 6;
+    [SerializeField] private int minDecor = 0;
+    [SerializeField] private Vector2 sizeRange = new Vector2(0.4f, 0.6f);
+    [SerializeField] private float centerClear = 0.75f;   
     
     [Header("Place Animation")]
     [SerializeField] private float growStartScale = 0f;
@@ -20,6 +30,14 @@ public class RoomVisual : MonoBehaviour
     [SerializeField] private float landPunch = 0.08f;
     [SerializeField] private float landPunchTime = 0.2f;
     [SerializeField] private int animatingOrderBoost = 50;
+    
+    private readonly List<SpriteRenderer> decor = new List<SpriteRenderer>();
+    private DecorPool decorPool;
+    private int decorBaseOrder;
+    private bool decorOrderCached;
+    
+    private readonly List<Vector2> candidateBuffer = new List<Vector2>();
+    private readonly List<int> indexBuffer = new List<int>();
     
     private MaterialPropertyBlock block;
     private Sequence placeSequence;
@@ -55,6 +73,80 @@ public class RoomVisual : MonoBehaviour
         panel.GetPropertyBlock(block);
         block.SetTexture(WallTexId, wallSprite != null ? wallSprite.texture : Texture2D.blackTexture);
         panel.SetPropertyBlock(block);
+    }
+
+    public void SetDecor(DecorPool pool, DecorSpritePool sprites, Color color,
+        IReadOnlyList<Vector2> cellCenters, float cellSize)
+    {
+        ClearDecor();
+        if (pool == null || sprites == null || sprites.Count == 0 || decorRoot == null) return;
+
+        decorPool = pool;
+        
+        int area = cellCenters.Count;
+        int max = Mathf.Min(area / 2, maxDecorPerRoom, sprites.Count); 
+        if (max <= 0) return;
+
+        int count = Random.Range(Mathf.Min(minDecor, max), max + 1);
+        if (count == 0) return;
+
+        candidateBuffer.Clear();
+        foreach (Vector2 p in cellCenters)
+        {
+            if (area > 2 && p.magnitude < centerClear * cellSize) continue;
+            candidateBuffer.Add(p);
+        }
+
+        count = Mathf.Min(count, candidateBuffer.Count);
+        if (count == 0) return;
+        ShuffleCells(candidateBuffer);
+        
+        indexBuffer.Clear();
+        for (int i = 0; i < sprites.Count; i++) indexBuffer.Add(i);
+        ShuffleIndexes(indexBuffer);
+
+        if (color.a <= 0f) color = Color.white;
+        
+        for (int i = 0; i < count; i++)
+        {
+            SpriteRenderer item = pool.Get(decorRoot);
+            item.sprite = sprites.Get(indexBuffer[i]);
+
+            Bounds bounds = item.sprite.bounds;
+
+            item.transform.localScale = Vector3.one; 
+            item.transform.localRotation = Quaternion.identity;
+            item.transform.localPosition = candidateBuffer[i] - (Vector2)bounds.center;
+            
+            item.color = color;
+            decor.Add(item);
+        }
+    }
+    
+    private void ClearDecor()
+    {
+        if (decorPool != null)
+            foreach (SpriteRenderer item in decor)
+                decorPool.Release(item);
+        decor.Clear();
+    }
+    
+    private static void ShuffleCells(List<Vector2> list)
+    {
+        for (int i = list.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            (list[i], list[j]) = (list[j], list[i]);
+        }
+    }
+
+    private static void ShuffleIndexes(List<int> list)
+    {
+        for (int i = list.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            (list[i], list[j]) = (list[j], list[i]);
+        }
     }
 
     public void PlayPlaceAnimation(Action onLanded)
@@ -131,11 +223,22 @@ public class RoomVisual : MonoBehaviour
 
         for (int i = 0; i < renderers.Length; i++)
             renderers[i].sortingOrder = baseOrders[i] + (boosted ? animatingOrderBoost : 0);
+        
+        if (decorGroup != null)
+        {
+            if (!decorOrderCached)
+            {
+                decorBaseOrder = decorGroup.sortingOrder;
+                decorOrderCached = true;
+            }
+            decorGroup.sortingOrder = decorBaseOrder + (boosted ? animatingOrderBoost : 0);
+        }
     }
     
     public void Release()
     {
         KillPlaceAnimation();
+        ClearDecor();
         SetCat(null);
     }
 

@@ -7,6 +7,17 @@ using UnityEngine.UI;
 
 public class GameManager : MonoSingleton<GameManager>
 {
+    public bool UnlimitedTime { get; set; }
+    public bool UnlimitedMoves { get; set; }
+    public int ForcedStars { get; set; }
+    
+    public int LevelCount => levels != null ? levels.Length : 0;
+    public int CurrentLevelNumber => currentLevelIndex + 1;
+    public float TimeRemaining => timeRemaining;
+    public int MovesRemaining => movesRemaining;
+    public bool HasTimeLimit => currentLevel != null && currentLevel.HasTimeLimit;
+    public bool HasMoveLimit => currentLevel != null && currentLevel.HasMoveLimit;
+    
     [SerializeField] private TextAsset levelsJson;
     
     [Header("Input")]
@@ -18,7 +29,7 @@ public class GameManager : MonoSingleton<GameManager>
     [Header("Win FX")]
     [SerializeField] private GameObject shotFx;
     [SerializeField] private float roomAnimationTimeout = 3f;
-    [SerializeField] private float panelDelayAfterShot = 0.3f;   // Bật GameOverPanel sau khi bật ShotFX khoảng này
+    [SerializeField] private float panelDelayAfterShot = 0.3f;
     
     [Header("Game Over Panel")]
     [SerializeField] private GameObject gameOverPanel;
@@ -27,14 +38,22 @@ public class GameManager : MonoSingleton<GameManager>
 
     [Header("Game Over Animation")]
     [SerializeField] private WinAnimController winAnim;
-    [SerializeField] private LoseAnimController loseAnim;
     
     [Header("Reward")]
     [SerializeField] private CollectButton collectButton;
     [SerializeField] private Button mainMenuButton;
-    [SerializeField] private int[] starRewards = { 5, 10, 20 };   // Thưởng coin theo 1, 2, 3 sao
-    [SerializeField] private int minWinStars = 1;                 // Thắng luôn được ít nhất ngần này sao
+    [SerializeField] private int[] starRewards = { 5, 10, 20 }; 
+    [SerializeField] private int minWinStars = 1;        
     [SerializeField] private CoinHud coinHud;
+
+    [Header("Revive")]
+    [SerializeField] private ReviveTimeOutPanel revivePanel;   
+    [SerializeField] private GameObject reviveRoot;    
+    [SerializeField] private LosePanel losePanel;        
+    [SerializeField] private int revivePrice = 900;
+    [SerializeField] private int reviveBonusSeconds = 20; 
+    [SerializeField] private int reviveBonusMoves = 5; 
+    [SerializeField] private int maxRevivesPerLevel = 1;
 
     public const string EditorStartLevelKey = "Shikacat.StartLevelIndex";
     
@@ -56,6 +75,7 @@ public class GameManager : MonoSingleton<GameManager>
     private int winStars;
     private int winReward;
     private bool lostByTimeOut;
+    private int revivesUsed;
 
     public bool IsGameOver => isGameOver;
     
@@ -71,10 +91,30 @@ public class GameManager : MonoSingleton<GameManager>
             buildController.RoomAnimationFinished += HandleRoomAnimationFinished;
         }
         if (collectButton != null) collectButton.Collected += HandleRewardCollected;
+        if (revivePanel != null)
+        {
+            revivePanel.ReviveRequested += HandleReviveRequested;
+            revivePanel.Declined += HandleReviveDeclined;
+        }
+        if (losePanel != null)
+        {
+            losePanel.RetryRequested += HandleLoseRetry;
+            losePanel.Closed += HandleLoseClosed;
+        }
     }
 
     private void OnDisable()
     {
+        if (revivePanel != null)
+        {
+            revivePanel.ReviveRequested -= HandleReviveRequested;
+            revivePanel.Declined -= HandleReviveDeclined;
+        }
+        if (losePanel != null)
+        {
+            losePanel.RetryRequested -= HandleLoseRetry;
+            losePanel.Closed -= HandleLoseClosed;
+        }
         if (buildController != null)
         {
             buildController.CellPressed -= HandleCellPressed;
@@ -109,7 +149,8 @@ public class GameManager : MonoSingleton<GameManager>
     private void Update()
     {
         if (isGameOver || currentLevel == null || !currentLevel.HasTimeLimit || !timerRunning) return;
-
+        if (UnlimitedTime) return;
+        
         timeRemaining -= Time.deltaTime;
         if (timeRemaining <= 0)
         {
@@ -120,6 +161,50 @@ public class GameManager : MonoSingleton<GameManager>
         }
 
         UpdateTimeHud();
+    }
+
+    public void CheatWin()
+    {
+        if (isGameOver || currentLevel == null) return;
+        
+        HandleWin(null);
+        winRoomAnimated = true;  
+    }
+
+    public void CheatLose(bool byTimeOut)
+    {
+        if (isGameOver || currentLevel == null) return;
+        HandleLose(byTimeOut);
+    }
+    
+    public void CheatAddTime(float seconds)
+    {
+        if (!HasTimeLimit) return;
+
+        timeRemaining += seconds;
+        displayedSeconds = -1;
+        UpdateTimeHud();
+    }
+
+    public void CheatAddMoves(int moves)
+    {
+        if (!HasMoveLimit) return;
+
+        movesRemaining += moves;
+        UpdateMovesHud();
+    }
+    
+    public void CheatGoToLevel(int levelNumber) => LoadLevel(levelNumber - 1);
+    
+    public void CheatRestart() => LoadLevel(currentLevelIndex);
+
+    public void CheatSaveCurrentLevel() => PlayerProgress.SaveLevelIndex(currentLevelIndex);
+
+    public void CheatClearSave()
+    {
+        PlayerProgress.Clear();
+        CoinWallet.Clear();
+        LoadLevel(0);
     }
     
     private void HandleRoomAnimationFinished(Room room)
@@ -165,11 +250,12 @@ public class GameManager : MonoSingleton<GameManager>
         movesRemaining = currentLevel.moveLimit;
 
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
+        revivesUsed = 0;
+        ClosePopups();
         if (winAnim != null) winAnim.gameObject.SetActive(false);
-        if (loseAnim != null) loseAnim.gameObject.SetActive(false);
-        if (shotFx != null) shotFx.SetActive(false);   // Tắt để lần thắng sau bật lại sẽ phát lại từ đầu
+        if (shotFx != null) shotFx.SetActive(false); 
         if (collectButton != null) collectButton.Hide();
-        if (coinHud != null) coinHud.Release(false);   // Phòng trường hợp chưa bấm Collect mà sang màn mới
+        if (coinHud != null) coinHud.Release(false);
         if (mainMenuButton != null) mainMenuButton.gameObject.SetActive(false);
         winRoom = null;
         winRoomAnimated = false;
@@ -251,7 +337,7 @@ public class GameManager : MonoSingleton<GameManager>
 
     private void ConsumeMove()
     {
-        if (!currentLevel.HasMoveLimit) return;
+        if (!currentLevel.HasMoveLimit || UnlimitedMoves) return;
 
         movesRemaining--;
         UpdateMovesHud();
@@ -259,6 +345,8 @@ public class GameManager : MonoSingleton<GameManager>
 
     private void CheckMoveLimitLose()
     {
+        if (UnlimitedMoves) return;
+        
         if (currentLevel.HasMoveLimit && movesRemaining <= 0)
             HandleLose();
     }
@@ -269,7 +357,9 @@ public class GameManager : MonoSingleton<GameManager>
         isGameOver = true;
 
         SaveProgress();
-        winStars = Mathf.Clamp(hud != null ? hud.LitStars : 3, Mathf.Clamp(minWinStars, 1, 3), 3);
+        winStars = ForcedStars > 0
+            ? Mathf.Clamp(ForcedStars, 1, 3)
+            : Mathf.Clamp(hud != null ? hud.LitStars : 3, Mathf.Clamp(minWinStars, 1, 3), 3);
         winReward = starRewards != null && starRewards.Length >= winStars ? starRewards[winStars - 1] : 0;
         GrantWinReward();
 
@@ -280,7 +370,6 @@ public class GameManager : MonoSingleton<GameManager>
         gameOverRoutine = StartCoroutine(WinSequenceRoutine());
     }
     
-    // Cộng và lưu coin ngay khi thắng; nút Collect chỉ chạy animation, HUD giữ số cũ tới lúc đó
     private void GrantWinReward()
     {
         if (useEditorStart || winReward <= 0) return;
@@ -304,7 +393,85 @@ public class GameManager : MonoSingleton<GameManager>
         isGameOver = true;
 
         lostByTimeOut = byTimeOut;
+
+        if (revivePanel != null && revivesUsed < maxRevivesPerLevel) ShowRevive(); 
+        else ShowGameOverPanel(false);
+    }
+
+    private void ShowRevive()
+    {
+        if (winAnim != null) winAnim.gameObject.SetActive(false);
+        if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(false);
+        if (mainMenuButton != null) mainMenuButton.gameObject.SetActive(false);
+        if (restartButton != null) restartButton.gameObject.SetActive(false);
+
+        if (gameOverPanel != null) gameOverPanel.SetActive(true);
+        if (reviveRoot != null) reviveRoot.SetActive(true);
+
+        revivePanel.Show(lostByTimeOut ? LoseReason.TimeOut : LoseReason.OutOfMoves,
+            revivePrice, lostByTimeOut ? reviveBonusSeconds : reviveBonusMoves);
+    }
+
+    private void HandleReviveRequested()
+    {
+        if (!CoinWallet.TrySpend(revivePrice))
+        {
+            revivePanel.ShowNotEnoughCoins();
+            return;
+        }
+
+        revivesUsed++;
+
+        if (lostByTimeOut) timeRemaining += reviveBonusSeconds;
+        else movesRemaining += reviveBonusMoves;
+
+        isGameOver = false;
+        ClosePopups();
+        if (gameOverPanel != null) gameOverPanel.SetActive(false);
+
+        displayedSeconds = -1;
+        if (currentLevel.HasTimeLimit) UpdateTimeHud();
+        if (currentLevel.HasMoveLimit) UpdateMovesHud();
+
+        timerRunning = true;
+    }
+
+    private void HandleReviveDeclined()
+    {
+        ClosePopups();
         ShowGameOverPanel(false);
+    }
+
+    private void ClosePopups()
+    {
+        if (revivePanel != null) revivePanel.Hide();
+        if (losePanel != null) losePanel.Hide();
+        if (reviveRoot != null) reviveRoot.SetActive(false);
+    }
+
+    private void ShowLose()
+    {
+        if (winAnim != null) winAnim.gameObject.SetActive(false);
+        if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(false);
+        if (mainMenuButton != null) mainMenuButton.gameObject.SetActive(false);
+        if (restartButton != null) restartButton.gameObject.SetActive(false);
+
+        if (gameOverPanel != null) gameOverPanel.SetActive(true);
+        if (reviveRoot != null) reviveRoot.SetActive(true);
+
+        losePanel.Show(currentLevelIndex + 1, 0);
+    }
+
+    private void HandleLoseRetry()
+    {
+        LoadLevel(currentLevelIndex);
+    }
+    
+    private void HandleLoseClosed()
+    {
+        ClosePopups();
+        if (restartButton != null) restartButton.gameObject.SetActive(true);
+        if (mainMenuButton != null) mainMenuButton.gameObject.SetActive(true);
     }
 
     private IEnumerator WinSequenceRoutine()
@@ -319,7 +486,7 @@ public class GameManager : MonoSingleton<GameManager>
         if (shotFx != null)
         {
             shotFx.SetActive(true);
-            if (panelDelayAfterShot > 0f) yield return new WaitForSeconds(panelDelayAfterShot);   // Không chờ ShotFX chạy hết, panel mở sau ~0.3s
+            if (panelDelayAfterShot > 0f) yield return new WaitForSeconds(panelDelayAfterShot); 
         }
 
         gameOverRoutine = null;
@@ -328,9 +495,20 @@ public class GameManager : MonoSingleton<GameManager>
     
     private void ShowGameOverPanel(bool win)
     {
-        if (winAnim != null) winAnim.gameObject.SetActive(false);
-        if (loseAnim != null) loseAnim.gameObject.SetActive(false);
+        ClosePopups();
 
+        if (!win)
+        {
+            if (losePanel != null) ShowLose();
+            else
+            {
+                if (gameOverPanel != null) gameOverPanel.SetActive(true);
+                if (restartButton != null) restartButton.gameObject.SetActive(true);
+            }
+            return;
+        }
+
+        if (winAnim != null) winAnim.gameObject.SetActive(false);
         if (gameOverPanel != null) gameOverPanel.SetActive(true);
         
         if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(false);
@@ -345,10 +523,6 @@ public class GameManager : MonoSingleton<GameManager>
                 if (coinHud != null) coinHud.Release(false);
                 HandleRewardCollected();
             }
-        }
-        else if (loseAnim != null)
-        {
-            loseAnim.Play(lostByTimeOut);
         }
     }
     

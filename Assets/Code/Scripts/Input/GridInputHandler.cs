@@ -8,6 +8,8 @@ public class GridInputHandler : MonoBehaviour
     public event Action<Vector2> PressMoved;
     public event Action<bool> PressEnded;
     
+    public static bool Blocked;
+    
     [Range(0f, 50f)]
     [SerializeField] private float dragThreshold = 10f;
 
@@ -18,6 +20,8 @@ public class GridInputHandler : MonoBehaviour
     
     private void Update()
     {
+        if (Blocked) return;
+        
         if (Input.touchCount > 0)
             HandleTouchInput();
         else
