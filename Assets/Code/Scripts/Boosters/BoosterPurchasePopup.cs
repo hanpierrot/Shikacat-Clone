@@ -1,25 +1,22 @@
-using System.Collections;
-using System.Collections.Generic;
 using DG.Tweening;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class BoosterPurchasePopup : MonoBehaviour
 {
-    [SerializeField] private TMP_Text titleText;
-    [SerializeField] private TMP_Text descText;
-    [SerializeField] private TMP_Text priceText;
+    [SerializeField] private Text titleText;
+    [SerializeField] private Text descText;
+    [SerializeField] private Text priceText;
+    [SerializeField] private Text amountText;
     [SerializeField] private Image iconImage;
-    [SerializeField] private Sprite[] icons;
-    
+
     [SerializeField] private Button buyButton;
     [SerializeField] private Button cancelButton;
-    
+
     private BoosterType current;
     private Color priceColor;
     private bool colorCached;
-    
+
     private void Awake()
     {
         buyButton.onClick.AddListener(OnBuy);
@@ -29,25 +26,26 @@ public class BoosterPurchasePopup : MonoBehaviour
     public void Show(BoosterType type, int price, int pack)
     {
         current = type;
+        BoosterManager.Entry entry = BoosterManager.Instance.GetEntry(type);
 
         if (!colorCached && priceText != null)
         {
             priceColor = priceText.color;
             colorCached = true;
         }
-        
+
         if (titleText != null) titleText.text = DisplayName(type);
-        if (descText != null) descText.text = pack > 1 ? $"Buy {pack} for {price} coins?" : $"Buy 1 for {price} coins?";
+        if (descText != null && entry != null) descText.text = entry.description;
+        if (amountText != null) amountText.text = $"x{pack}";
         if (priceText != null)
         {
             priceText.text = price.ToString();
             priceText.color = priceColor;
         }
-        if (iconImage != null && icons != null && (int)type < icons.Length && icons[(int)type] != null)
-            iconImage.sprite = icons[(int)type];
+        if (iconImage != null && entry != null && entry.icon != null) iconImage.sprite = entry.icon;
 
         gameObject.SetActive(true);
-        
+
         if (GameManager.Instance != null) GameManager.Instance.TimerPaused = true;
     }
 
@@ -70,7 +68,7 @@ public class BoosterPurchasePopup : MonoBehaviour
             }).SetTarget(this);
         }
     }
-    
+
     public void Close()
     {
         gameObject.SetActive(false);
@@ -86,9 +84,9 @@ public class BoosterPurchasePopup : MonoBehaviour
     {
         switch (type)
         {
-            case BoosterType.Hint: return "Hint";
-            case BoosterType.Freeze: return "Freeze";
-            default: return "Auto Build";
+            case BoosterType.Hint: return "HINT";
+            case BoosterType.Freeze: return "FREEZE";
+            default: return "REVEAL";
         }
     }
 }

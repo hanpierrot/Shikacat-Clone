@@ -1,6 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,10 +7,13 @@ public class BoosterButton : MonoBehaviour
     [SerializeField] private Button button;
     [SerializeField] private GameObject unlockedRoot;
     [SerializeField] private GameObject lockedRoot;
-    [SerializeField] private TMP_Text countText;
+    [SerializeField] private Image iconImage;
+    [SerializeField] private GameObject amountBadge;
+    [SerializeField] private Text countText;
     [SerializeField] private GameObject addIcon;
     [SerializeField] private GameObject activeMark;
-    
+    [SerializeField] private Text unlockLevelText;
+
     private void OnEnable()
     {
         button.onClick.AddListener(OnClick);
@@ -34,7 +34,7 @@ public class BoosterButton : MonoBehaviour
         bool usable = BoosterManager.Instance.IsUnlocked(type) && GameManager.Instance != null && !GameManager.Instance.IsGameOver;
         if (button.interactable != usable) button.interactable = usable;
     }
-    
+
     public void SetActiveMark(bool active)
     {
         if (activeMark != null) activeMark.SetActive(active);
@@ -54,18 +54,18 @@ public class BoosterButton : MonoBehaviour
 
     private void Refresh()
     {
+        BoosterManager.Entry entry = BoosterManager.Instance.GetEntry(type);
         bool unlocked = BoosterManager.Instance.IsUnlocked(type);
         int count = BoosterInventory.Count(type);
-        
+
         if (unlockedRoot != null) unlockedRoot.SetActive(unlocked);
         if (lockedRoot != null) lockedRoot.SetActive(!unlocked);
+        if (unlockLevelText != null && entry != null) unlockLevelText.text = $"LV {entry.unlockLevel}";
+        if (iconImage != null && entry != null && entry.icon != null) iconImage.sprite = entry.icon;
 
         bool hasStock = count > 0;
-        if (countText != null)
-        {
-            countText.gameObject.SetActive(unlocked && hasStock);
-            countText.text = count.ToString();
-        }
+        if (amountBadge != null) amountBadge.SetActive(unlocked && hasStock);
+        if (countText != null) countText.text = count.ToString();
         if (addIcon != null) addIcon.SetActive(unlocked && !hasStock);
     }
 }

@@ -28,6 +28,9 @@ public class WinAnimController : MonoBehaviour
     private Sequence sequence;
     private Vector2[] restPositions;
     private bool playing;
+    private bool rewardShown;
+    private int pendingReward;
+    private int pendingStars;
 
     private void OnEnable()
     {
@@ -68,6 +71,9 @@ public class WinAnimController : MonoBehaviour
 
         gameObject.SetActive(true);
         playing = true;
+        rewardShown = false;
+        pendingReward = reward;
+        pendingStars = stars;
 
         if (dropFx != null) dropFx.SetActive(false);
         if (coinRoot != null) coinRoot.SetActive(false);
@@ -104,7 +110,7 @@ public class WinAnimController : MonoBehaviour
         }
 
         // 3. Ngay khi mèo bắt đầu rơi: tắt Well-Done, hiện coin, sao và nút Collect (chạy chồng)
-        sequence.AppendCallback(() => ShowReward(reward, stars));
+        sequence.AppendCallback(ShowReward);
 
         for (int i = 0; i < catRoots.Length; i++)
         {
@@ -124,8 +130,11 @@ public class WinAnimController : MonoBehaviour
         });
     }
 
-    private void ShowReward(int reward, int stars)
+    private void ShowReward()
     {
+        if (rewardShown) return;
+        rewardShown = true;
+
         wellDone.gameObject.SetActive(false);
 
         if (coinRoot != null)
@@ -137,21 +146,28 @@ public class WinAnimController : MonoBehaviour
 
         coin.AnimationState.SetAnimation(0, "rotation", true);
 
-        if (starsPanel != null) starsPanel.Play(stars);
-        if (collectButton != null) collectButton.Show(reward);
+        if (starsPanel != null) starsPanel.Play(pendingStars);
+        if (collectButton != null) collectButton.Show(pendingReward);
     }
 
     // Hoàn tất ngay mọi animation và hiện nút Collect
     public void Skip()
     {
         if (!playing) return;
+        playing = false;
 
         if (sequence != null && sequence.IsActive())
-            sequence.Complete();   // Chạy nốt các callback còn lại (bật DropFX, hiện coin, sao, Collect, tắt mèo)
+        {
+            sequence.Complete(true);   // true: chạy cả các AppendCallback (DropFX, ShowReward, tắt mèo)
+            sequence = null;
+        }
+
+        // Chốt cuối: dù callback có bị bỏ lỡ thì trạng thái cuối vẫn đúng
+        ShowReward();
+        foreach (RectTransform root in catRoots) root.gameObject.SetActive(false);
+        if (dropFx != null) dropFx.SetActive(true);
 
         if (starsPanel != null) starsPanel.Complete();
-
-        playing = false;
     }
 
     private void HandleCollectClicked()

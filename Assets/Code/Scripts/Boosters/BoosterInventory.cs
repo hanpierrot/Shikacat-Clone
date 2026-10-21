@@ -1,12 +1,11 @@
 using System;
-using PlasticGui.Configuration.CloudEdition;
 using UnityEngine;
 
 public enum BoosterType
 {
     Hint = 0,
     Freeze = 1,
-    AutoBuild = 2
+    Reveal = 2
 }
 
 public static class BoosterInventory

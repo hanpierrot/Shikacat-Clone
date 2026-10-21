@@ -12,13 +12,15 @@ public class BoosterManager : MonoSingleton<BoosterManager>
         public int unlockLevel;
         public int price;
         public int packSize = 1;
+        public Sprite icon;
+        [TextArea] public string description;
     }
 
     [SerializeField] private Entry[] entries =
     {
-        new Entry { type = BoosterType.Hint, unlockLevel = 5, price = 100, packSize = 1 },
-        new Entry { type = BoosterType.Freeze, unlockLevel = 8, price = 150, packSize = 1 },
-        new Entry { type = BoosterType.AutoBuild, unlockLevel = 12, price = 200, packSize = 1 }
+        new Entry { type = BoosterType.Hint, unlockLevel = 5, price = 100, packSize = 1, description = "Highlights one correct room for you." },
+        new Entry { type = BoosterType.Freeze, unlockLevel = 8, price = 150, packSize = 1, description = "Freezes the timer and moves for 10 seconds." },
+        new Entry { type = BoosterType.Reveal, unlockLevel = 12, price = 200, packSize = 1, description = "Tap a clue to build its correct room instantly." }
     };
     
     [SerializeField] private int unlockGrant = 2;
@@ -106,5 +108,10 @@ public class BoosterManager : MonoSingleton<BoosterManager>
 
         BoosterInventory.Add(type, entry.packSize);
         return true;
+    }
+    
+    public void Consume(BoosterType type)
+    {
+        if (BoosterInventory.TryConsume(type)) Used?.Invoke(type);
     }
 }

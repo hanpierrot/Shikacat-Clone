@@ -354,7 +354,7 @@ public class GameManager : MonoSingleton<GameManager>
 
     private void ConsumeMove()
     {
-        if (!currentLevel.HasMoveLimit || UnlimitedMoves || IsFrozen) return;
+        if (!currentLevel.HasMoveLimit || UnlimitedMoves || IsFrozen || GridManager.Instance.IsRevealing) return;
 
         movesRemaining--;
         UpdateMovesHud();
