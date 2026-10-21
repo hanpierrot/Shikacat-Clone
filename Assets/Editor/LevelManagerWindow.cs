@@ -23,6 +23,7 @@ public class LevelManagerWindow : EditorWindow
     private Vector2 detailScroll;
     private GUIStyle cellLabelStyle;
     
+    private enum LimitKind { Time, Moves }
     private enum Brush { Select, Hole, Room, Clue, Erase }
     private enum Modifier { None, Locked, Hidden }
     
@@ -196,8 +197,19 @@ public class LevelManagerWindow : EditorWindow
         EditorGUILayout.LabelField("Clues / Rooms in Solution", $"{level.clues.Length} / {level.solution.Length}");
 
         EditorGUI.BeginChangeCheck();
-        level.timeLimit = Mathf.Max(0f, EditorGUILayout.FloatField("Time Limit (0 = off)", level.timeLimit));
-        level.moveLimit = Mathf.Max(0, EditorGUILayout.IntField("Move Limit (0 = off)", level.moveLimit));
+        LimitKind limitKind = (LimitKind)EditorGUILayout.EnumPopup("Limit type", level.moveLimit > 0 ? LimitKind.Moves : LimitKind.Time);
+        if (limitKind == LimitKind.Time)
+        {
+            float time = level.timeLimit > 0f ? level.timeLimit : 60f;
+            level.timeLimit = Mathf.Max(1f, EditorGUILayout.FloatField("Time Limit (seconds)", time));
+            level.moveLimit = 0;
+        }
+        else
+        {
+            int moves = level.moveLimit > 0 ? level.moveLimit : 10;
+            level.moveLimit = Mathf.Max(1, EditorGUILayout.IntField("Move Limit", moves));
+            level.timeLimit = 0f;
+        }
         if (EditorGUI.EndChangeCheck())
         {
             dirty = true;

@@ -24,7 +24,7 @@
 | Thay phòng | Kéo đè lên phòng cũ sẽ thay thế, tính 1 lượt |
 | Huỷ phòng | Bấm vào phòng để huỷ |
 | Điều kiện thắng | Lưới đầy và mọi phòng có diện tích đúng với clue |
-| Giới hạn | Time, Moves hoặc cả hai (0 nghĩa là tắt) |
+| Giới hạn | Đúng một loại: Time hoặc Moves (loại còn lại = 0) |
 | Bộ đếm | Chỉ chạy sau khi người chơi bấm cell đầu tiên |
 | Khoá input | Khoá khi game kết thúc và khoá các ô của phòng đang chạy animation |
 | Chi tiết | Khoá khi bấm ra ngoài lưới hoặc UI, chống bấm đôi khi đang đánh giá preview |
@@ -120,7 +120,7 @@
 3. Biến một số cụm phòng liền kề thành hole.
 4. Gán loại clue theo lịch mở khoá.
 5. Kiểm tra bằng solver, sửa trùng lời giải bằng cách thêm ràng buộc hoặc dời clue.
-6. Gán giới hạn time, moves hoặc cả hai theo lịch.
+6. Gán đúng một loại giới hạn (time hoặc moves) theo lịch.
 
 ### Cấu hình theo level
 | Nội dung | Thiết lập hiện tại |
@@ -129,7 +129,7 @@
 | Mốc mechanic | Hole từ level 21, Hidden từ 26, Shaped từ 31, Locked từ 36, **clue kép từ 41** |
 | Level giới thiệu | Mỗi mechanic mới bắt buộc xuất hiện đúng ở level mở khoá |
 | Tier | Easy (1 đến 20), Medium (21 đến 50), Hard (51 trở đi) |
-| Giới hạn | Khối level chỉ time, khối chỉ moves, level chẵn chục từ 30 dùng cả hai |
+| Giới hạn | Khối level chỉ time, khối chỉ moves, có đoạn chèn Moves trong khối Time (không bao giờ dùng cả hai) |
 
 ### Kết quả batch gần nhất
 - Easy, Medium, Hard: 100% level đạt lời giải duy nhất, thời gian sinh vài ms mỗi level.

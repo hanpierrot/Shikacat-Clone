@@ -21,6 +21,9 @@ public class LevelHud : MonoBehaviour
     [SerializeField] private Sprite timeIconSprite;
     [SerializeField] private Sprite movesIconSprite;
     [SerializeField] private string levelFormat = "Level {0}";
+    
+    [Header("Freeze")]
+    [SerializeField] private GameObject freezeImage;
 
     private float[] thresholds;
     private bool[] lost;
@@ -47,6 +50,7 @@ public class LevelHud : MonoBehaviour
         }
 
         SetProgress(1f);
+        SetFrozen(false);
     }
 
     public void SetProgress(float fraction)
@@ -58,7 +62,7 @@ public class LevelHud : MonoBehaviour
         for (int i = 0; i < stars.Length; i++)
         {
             bool isLost = fraction < thresholds[i];
-            if (!isLost || lost[i]) continue;   // Sao đã mất thì không lấy lại (kể cả khi hồi sinh làm limit tăng lên)
+            if (!isLost || lost[i]) continue;
 
             lost[i] = isLost;
             if (stars[i] == null) continue;
@@ -75,7 +79,12 @@ public class LevelHud : MonoBehaviour
         }
     }
     
-    // Số sao còn sáng trên thanh tiến trình (dùng để tính thưởng khi thắng)
+    public void SetFrozen(bool frozen)
+    {
+        if (freezeImage != null && freezeImage.activeSelf != frozen) 
+            freezeImage.SetActive(frozen);
+    }
+    
     public int LitStars
     {
         get

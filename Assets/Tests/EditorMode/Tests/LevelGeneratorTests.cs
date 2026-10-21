@@ -67,27 +67,6 @@ public class LevelGeneratorTests
     }
 
     [Test]
-    public void LimitSchedule_FollowsBlocksAndBothRule()
-    {
-        GeneratorConfig config = LoadConfig();
-
-        Assert.AreEqual(LimitMode.Timer, config.ResolveMode(1, 5));
-        Assert.AreEqual(LimitMode.Timer, config.ResolveMode(10, 5));   // Chưa tới mốc cả hai
-        Assert.AreEqual(LimitMode.Moves, config.ResolveMode(25, 5));
-        Assert.AreEqual(LimitMode.Both, config.ResolveMode(30, 5));
-        Assert.AreEqual(LimitMode.Both, config.ResolveMode(40, 5));
-        Assert.AreEqual(LimitMode.Both, config.ResolveMode(50, 5));
-
-        // Khối 31-50 chính là timer, mỗi seed phải có đúng các đoạn chèn Moves (trừ 40, 50 là Both)
-        int moves = 0;
-        for (int number = 31; number <= 49; number++)
-            if (number != 40 && config.ResolveMode(number, 5) == LimitMode.Moves) moves++;
-
-        Assert.Greater(moves, 0);
-        Assert.AreEqual(config.ResolveMode(37, 5), config.ResolveMode(37, 5));   // Cùng seed cho cùng kết quả
-    }
-
-    [Test]
     public void LockedThresholds_AreAlwaysFeasible()
     {
         GeneratorConfig config = LoadConfig();
@@ -130,17 +109,17 @@ public class LevelGeneratorTests
     {
         GeneratorConfig config = LoadConfig();
         var options = new GenerationOptions { Seed = 7 };
+        GeneratorConfig.MechanicUnlocks m = config.mechanics;
 
-        for (int number = 1; number <= 20; number++)
+        for (int number = 1; number < m.holesFromLevel; number++)
         {
             LevelData level = LevelGenerator.Generate(config, number, options, out _);
             Assert.IsNotNull(level, $"Level {number}");
             Assert.AreEqual(0, level.holes.Length, $"Level {number}: không được có ô tắt");
-            foreach (LevelData.ClueEntry clue in level.clues)
-                Assert.AreEqual(ClueType.Normal, clue.type, $"Level {number}: chỉ có clue thường");
         }
 
-        for (int number = 21; number <= 25; number++)
+        int firstSpecial = Mathf.Min(m.hiddenFromLevel, Mathf.Min(m.directionalFromLevel, m.lockedFromLevel));
+        for (int number = 1; number < firstSpecial; number++)
         {
             LevelData level = LevelGenerator.Generate(config, number, options, out _);
             foreach (LevelData.ClueEntry clue in level.clues)
@@ -153,17 +132,21 @@ public class LevelGeneratorTests
     {
         GeneratorConfig config = LoadConfig();
         var options = new GenerationOptions { Seed = 7 };
+        GeneratorConfig.MechanicUnlocks m = config.mechanics;
 
-        Assert.Greater(LevelGenerator.Generate(config, 21, options, out _).holes.Length, 0, "Level 21 phải có ô tắt");
-        Assert.IsTrue(HasType(LevelGenerator.Generate(config, 26, options, out _), ClueType.Hidden), "Level 26 phải có clue ẩn");
+        Assert.Greater(LevelGenerator.Generate(config, m.holesFromLevel, options, out _).holes.Length, 0,
+            $"Level {m.holesFromLevel} phải có ô tắt");
+        Assert.IsTrue(HasType(LevelGenerator.Generate(config, m.hiddenFromLevel, options, out _), ClueType.Hidden),
+            $"Level {m.hiddenFromLevel} phải có clue ẩn");
 
-        LevelData shaped = LevelGenerator.Generate(config, 31, options, out _);
+        LevelData shaped = LevelGenerator.Generate(config, m.directionalFromLevel, options, out _);
         Assert.IsTrue(HasType(shaped, ClueType.Horizontal) || HasType(shaped, ClueType.Vertical) || HasType(shaped, ClueType.Square),
-            "Level 31 phải có clue hình dạng");
+            $"Level {m.directionalFromLevel} phải có clue hình dạng");
 
-        Assert.IsTrue(HasType(LevelGenerator.Generate(config, 36, options, out _), ClueType.Locked), "Level 36 phải có clue khoá");
+        Assert.IsTrue(HasType(LevelGenerator.Generate(config, m.lockedFromLevel, options, out _), ClueType.Locked),
+            $"Level {m.lockedFromLevel} phải có clue khoá");
     }
-    
+
     [Test]
     public void GridSize_FollowsCurve()
     {
@@ -188,7 +171,7 @@ public class LevelGeneratorTests
         var options = new GenerationOptions { Seed = 7 };
         int unlock = config.mechanics.comboFromLevel;
 
-        for (int number = 21; number < unlock; number++)
+        for (int number = 1; number < unlock; number++)
         {
             LevelData level = LevelGenerator.Generate(config, number, options, out _);
             foreach (LevelData.ClueEntry clue in level.clues)

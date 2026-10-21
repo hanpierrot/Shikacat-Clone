@@ -4,8 +4,7 @@ using UnityEngine;
 public enum LimitMode
 {
     Timer = 0,
-    Moves = 1,
-    Both = 2
+    Moves = 1   // Mỗi level chỉ dùng một loại limit (không còn chế độ cả hai)
 }
 
 [Serializable]
@@ -88,10 +87,6 @@ public class GeneratorConfig
     [Serializable]
     public class LimitSchedule
     {
-        public int bothFromLevel = 30;
-        public int bothEvery = 10;
-        public int bothMoveExtra = 1;
-        public float bothTimeFactor = 1.25f;
         public LimitMode fallbackMode = LimitMode.Timer;
         public LimitBlock[] blocks = new LimitBlock[0];
     }
@@ -186,9 +181,12 @@ public class GeneratorConfig
             if (tier.lockedMax > 0 && tier.lockedMaxUnlock < 1) { error = $"Tier {tier.name}: lockedMaxUnlock phải >= 1"; return false; }
         }
 
+        if (!Enum.IsDefined(typeof(LimitMode), limitSchedule.fallbackMode)) { error = "limitSchedule.fallbackMode phải là 0 (Timer) hoặc 1 (Moves)"; return false; }
+
         foreach (LimitBlock block in limitSchedule.blocks)
         {
             if (block.toLevel < block.fromLevel) { error = $"Khối {block.fromLevel}-{block.toLevel} không hợp lệ"; return false; }
+            if (!Enum.IsDefined(typeof(LimitMode), block.mode)) { error = $"Khối {block.fromLevel}-{block.toLevel}: mode phải là 0 (Timer) hoặc 1 (Moves)"; return false; }
             if (block.insertRuns > 0 && block.insertMax < block.insertMin) { error = $"Khối {block.fromLevel}-{block.toLevel}: insertMax < insertMin"; return false; }
         }
         
@@ -295,14 +293,11 @@ public class GeneratorConfig
     public LimitMode ResolveMode(int levelNumber, int seed)
     {
         LimitSchedule schedule = limitSchedule;
-        if(schedule.bothEvery > 0 && levelNumber >= schedule.bothFromLevel && levelNumber % schedule.bothEvery == 0)
-            return LimitMode.Both;
-        
         foreach (LimitBlock block in schedule.blocks)
         {
             if (levelNumber < block.fromLevel || levelNumber > block.toLevel) continue;
 
-            if (block.mode != LimitMode.Both && block.insertRuns > 0)
+            if (block.insertRuns > 0)
             {
                 var rng = new System.Random(unchecked(seed * 31 + block.fromLevel));
                 int length = block.toLevel - block.fromLevel + 1;
