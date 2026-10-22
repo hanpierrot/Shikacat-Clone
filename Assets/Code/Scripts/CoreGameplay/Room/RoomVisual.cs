@@ -149,30 +149,50 @@ public class RoomVisual : MonoBehaviour
         }
     }
 
-    public void PlayPlaceAnimation(Action onLanded)
+    public void PlayPlaceAnimation(Action onLanded, Vector3? growOrigin = null)
     {
         KillPlaceAnimation();
         
         Vector3 restPosition = transform.position;
         Vector3 restScale = transform.localScale;
-        Vector3 liftedPosition = restPosition + Vector3.up * (liftHeight * restScale.x);
+        Vector3 pivot = growOrigin ?? restPosition;
         
-        SetSortingBoost(true);
+        float liftY = liftHeight * restScale.x;
+        // Không có thời gian grow/hover/drop thì vào thẳng trạng thái cuối, không chờ DOTween cập nhật ở frame sau
+        bool instant = growTime + hoverTime + dropTime <= 0f;
+        float k = instant ? 1f : growStartScale;
+        float lift = instant ? 0f : 1f;
+
+        void Apply()
+        {
+            Vector3 position = pivot + (restPosition - pivot) * k;
+            position.y += liftY * lift;
+            transform.position = position;
+            transform.localScale = restScale * k;
+        }
         
-        transform.position = liftedPosition;
-        transform.localScale = Vector3.one * growStartScale;
+        SetSortingBoost(!instant);
+        Apply();
         
         placeSequence = DOTween.Sequence().SetTarget(transform);
-        placeSequence.Append(transform.DOScale(restScale * hoverScale, growTime).SetEase(Ease.OutBack));
-        placeSequence.AppendInterval(hoverTime);
-        placeSequence.Append(transform.DOMove(restPosition, dropTime).SetEase(Ease.InQuad));
-        placeSequence.Join(transform.DOScale(restScale, dropTime).SetEase(Ease.InQuad));
-        placeSequence.AppendCallback(() =>
+        if (instant)
         {
-            SetSortingBoost(false);
             onLanded?.Invoke();
-        });
-        placeSequence.Append(transform.DOPunchScale(restScale * landPunch, landPunchTime, 6, 0.6f));
+        }
+        else
+        {
+            placeSequence.Append(DOTween.To(() => k, v => { k = v; Apply(); }, hoverScale, growTime).SetEase(Ease.OutBack));
+            placeSequence.AppendInterval(hoverTime);
+            placeSequence.Append(DOTween.To(() => k, v => { k = v; Apply(); }, 1f, dropTime).SetEase(Ease.InQuad));
+            placeSequence.Join(DOTween.To(() => lift, v => { lift = v; Apply(); }, 0f, dropTime).SetEase(Ease.InQuad));
+            placeSequence.AppendCallback(() =>
+            {
+                SetSortingBoost(false);
+                onLanded?.Invoke();
+            });
+        }
+        if (landPunch > 0f && landPunchTime > 0f)
+            placeSequence.Append(transform.DOPunchScale(restScale * landPunch, landPunchTime, 6, 0.6f));
         placeSequence.OnKill(() =>
         {
             SetSortingBoost(false);

@@ -97,9 +97,7 @@ MonoBehaviour:
   decorGroup: {fileID: 3916947740840341990}
   maxDecorPerRoom: 6
   minDecor: 0
-  jitter: 0.25
   sizeRange: {x: 0.4, y: 0.6}
-  maxTilt: 25
   centerClear: 0.75
   growStartScale: 0
   growTime: 0.18
