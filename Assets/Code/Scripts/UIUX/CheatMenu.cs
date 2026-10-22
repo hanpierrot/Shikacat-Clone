@@ -114,6 +114,33 @@ public class CheatMenu : MonoBehaviour
         gm.UnlimitedTime = GUILayout.Toggle(gm.UnlimitedTime, "Unlimited time");
         gm.UnlimitedMoves = GUILayout.Toggle(gm.UnlimitedMoves, "Unlimited moves");
 
+        Header("Boosters");
+        BoosterManager bm = BoosterManager.Instance;
+        if (bm != null)
+        {
+            bm.UnlimitedBoosters = GUILayout.Toggle(bm.UnlimitedBoosters, "Unlimited boosters (không trừ kho, không bật popup mua)");
+
+            foreach (BoosterType type in System.Enum.GetValues(typeof(BoosterType)))
+            {
+                GUILayout.Label($"{type}: stock {BoosterInventory.Count(type)}   {(bm.IsUnlocked(type) ? "unlocked" : "LOCKED")}");
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("+1")) BoosterInventory.Add(type, 1);
+                if (GUILayout.Button("+5")) BoosterInventory.Add(type, 5);
+                if (GUILayout.Button("Stock 0")) SetBoosterStock(type, 0);
+                if (GUILayout.Button("Unlock")) bm.CheatUnlock(type);
+                if (GUILayout.Button("Use free")) { bm.CheatUse(type); SetOpen(false); }
+                if (GUILayout.Button("Buy popup")) { bm.RequestPurchase(type); SetOpen(false); }
+                GUILayout.EndHorizontal();
+            }
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Unlock all"))
+                foreach (BoosterType type in System.Enum.GetValues(typeof(BoosterType))) bm.CheatUnlock(type);
+            if (GUILayout.Button("Reset boosters (khóa lại + kho 0)")) BoosterInventory.Clear();
+            if (GUILayout.Button("End freeze")) gm.CheatEndFreeze();
+            GUILayout.EndHorizontal();
+        }
+        
         Header("Other");
         GUILayout.BeginHorizontal();
         GUILayout.Label($"Force stars on win: {(gm.ForcedStars == 0 ? "off" : gm.ForcedStars.ToString())}", GUILayout.Width(220));
@@ -146,6 +173,13 @@ public class CheatMenu : MonoBehaviour
         int delta = target - CoinWallet.Balance;
         if (delta > 0) CoinWallet.Add(delta);
         else if (delta < 0) CoinWallet.TrySpend(-delta);
+    }
+    
+    private static void SetBoosterStock(BoosterType type, int target)
+    {
+        while (BoosterInventory.Count(type) > target && BoosterInventory.TryConsume(type)) { }
+        int delta = target - BoosterInventory.Count(type);
+        if (delta > 0) BoosterInventory.Add(type, delta);
     }
 
     private static void Header(string text)

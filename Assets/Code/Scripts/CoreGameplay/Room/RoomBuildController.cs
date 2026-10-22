@@ -31,6 +31,7 @@ public class RoomBuildController : MonoBehaviour
     [SerializeField] private DecorPool decorPool;
     [SerializeField] private DecorSpritePool decorSprites;
 
+    public Func<int, int, bool> PressInterceptor;
     public Vector3 LastReleaseWorldPosition { get; private set; }
     
     private static bool IsInputLocked => GameManager.Instance != null && GameManager.Instance.IsGameOver;
@@ -54,7 +55,6 @@ public class RoomBuildController : MonoBehaviour
     private bool isPressValid;
     private bool isResolving;
     private Coroutine prewarmRoutine;
-
 
     private void Awake()
     {
@@ -101,6 +101,12 @@ public class RoomBuildController : MonoBehaviour
         Vector3 world = targetCamera.ScreenToWorldPoint(screenPosition);
         isPressValid = GridManager.Instance.WorldToGrid(world, out startRow, out startCol);
         if (!isPressValid) return;
+        
+        if (PressInterceptor != null && PressInterceptor(startRow, startCol))
+        {
+            isPressValid = false;
+            return;
+        }
 
         if (GridManager.Instance.IsCellInPlacingRoom(startRow, startCol)) 
         {
@@ -226,6 +232,14 @@ public class RoomBuildController : MonoBehaviour
         if (previewAreaText != null) previewAreaText.gameObject.SetActive(false);
         ResetBounds();
         isPressValid = false;
+    }
+    
+    public Room BuildRoom(int minRow, int maxRow, int minCol, int maxCol, int originRow, int originCol)
+    {
+        LastReleaseWorldPosition = GridManager.Instance.GridToWorld(originRow, originCol);
+        Room room = GridManager.Instance.CommitRoom(minRow, maxRow, minCol, maxCol);
+        SpawnRoomPanel(room);
+        return room;
     }
     
     private void TryCommitSelection()

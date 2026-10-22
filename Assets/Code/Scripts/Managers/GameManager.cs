@@ -17,6 +17,8 @@ public class GameManager : MonoSingleton<GameManager>
     public int MovesRemaining => movesRemaining;
     public bool HasTimeLimit => currentLevel != null && currentLevel.HasTimeLimit;
     public bool HasMoveLimit => currentLevel != null && currentLevel.HasMoveLimit;
+    public bool IsEditorStart => useEditorStart;
+    public bool TimerPaused { get; set; }
     
     [SerializeField] private TextAsset levelsJson;
     
@@ -54,6 +56,9 @@ public class GameManager : MonoSingleton<GameManager>
     [SerializeField] private int reviveBonusSeconds = 20; 
     [SerializeField] private int reviveBonusMoves = 5; 
     [SerializeField] private int maxRevivesPerLevel = 1;
+    
+    [Header("Freeze Booster")]
+    [SerializeField] private float freezeDuration = 10f;
 
     public const string EditorStartLevelKey = "Shikacat.StartLevelIndex";
     
@@ -76,6 +81,9 @@ public class GameManager : MonoSingleton<GameManager>
     private int winReward;
     private bool lostByTimeOut;
     private int revivesUsed;
+    private float freezeTimeLeft;
+
+    public bool IsFrozen => freezeTimeLeft > 0f;
 
     public bool IsGameOver => isGameOver;
     
@@ -144,12 +152,18 @@ public class GameManager : MonoSingleton<GameManager>
         int editorIndex = ConsumeEditorStartLevel();
         useEditorStart = editorIndex >= 0;
         LoadLevel(useEditorStart ? editorIndex : PlayerProgress.LoadLevelIndex());
+        
+        if (BoosterManager.Instance != null)
+            BoosterManager.Instance.SetHandler(BoosterType.Freeze, TryFreeze);
     }
 
     private void Update()
     {
+        TickFreeze();
+        
         if (isGameOver || currentLevel == null || !currentLevel.HasTimeLimit || !timerRunning) return;
-        if (UnlimitedTime) return;
+        if (TimerPaused) return;
+        if (UnlimitedTime || IsFrozen) return;
         
         timeRemaining -= Time.deltaTime;
         if (timeRemaining <= 0)
@@ -194,6 +208,8 @@ public class GameManager : MonoSingleton<GameManager>
         UpdateMovesHud();
     }
     
+    public void CheatEndFreeze() => EndFreeze();
+    
     public void CheatGoToLevel(int levelNumber) => LoadLevel(levelNumber - 1);
     
     public void CheatRestart() => LoadLevel(currentLevelIndex);
@@ -203,6 +219,7 @@ public class GameManager : MonoSingleton<GameManager>
     public void CheatClearSave()
     {
         PlayerProgress.Clear();
+        BoosterInventory.Clear();
         CoinWallet.Clear();
         LoadLevel(0);
     }
@@ -243,6 +260,8 @@ public class GameManager : MonoSingleton<GameManager>
             StopCoroutine(gameOverRoutine);
             gameOverRoutine = null;
         }
+        
+        EndFreeze();
 
         isGameOver = false;
         timerRunning = false;
@@ -337,7 +356,7 @@ public class GameManager : MonoSingleton<GameManager>
 
     private void ConsumeMove()
     {
-        if (!currentLevel.HasMoveLimit || UnlimitedMoves) return;
+        if (!currentLevel.HasMoveLimit || UnlimitedMoves || IsFrozen || GridManager.Instance.IsRevealing) return;
 
         movesRemaining--;
         UpdateMovesHud();
@@ -533,6 +552,36 @@ public class GameManager : MonoSingleton<GameManager>
         if (mainMenuButton != null) mainMenuButton.gameObject.SetActive(true);
         if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(hasNext);
         if (restartButton != null) restartButton.gameObject.SetActive(!hasNext);
+    }
+
+    private bool TryFreeze()
+    {
+        if (isGameOver || currentLevel == null || !timerRunning || IsFrozen) return false;
+        
+        freezeTimeLeft = freezeDuration;
+        if (hud != null) hud.SetFrozen(true);
+        return true;
+    }
+    
+    private void TickFreeze()
+    {
+        if (freezeTimeLeft <= 0f) return;
+
+        if (isGameOver)
+        {
+            EndFreeze();
+            return;
+        }
+        if (TimerPaused) return;
+
+        freezeTimeLeft -= Time.deltaTime;
+        if (freezeTimeLeft <= 0f) EndFreeze();
+    }
+
+    private void EndFreeze()
+    {
+        freezeTimeLeft = 0f;
+        if (hud != null) hud.SetFrozen(false);
     }
     
     public void LoadNextLevel()

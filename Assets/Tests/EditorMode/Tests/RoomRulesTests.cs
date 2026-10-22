@@ -40,10 +40,18 @@ public class RoomRulesTests
         return level;
     }
     
+    // Mỗi level chỉ có một loại limit: chuyển sang giới hạn lượt thì tắt giới hạn thời gian
+    private static LevelData WithMoves(LevelData level, int moves)
+    {
+        level.timeLimit = 0f;
+        level.moveLimit = moves;
+        return level;
+    }
+
     private static LevelData TwoRowLevel()
     {
         var level = MakeLevel(2, 2, new[] { Clue(0, 0, 2), Clue(1, 0, 2) });
-        level.moveLimit = 4;
+        WithMoves(level, 4);
         return level;
     }
 
@@ -115,10 +123,19 @@ public class RoomRulesTests
     }
 
     [Test]
+    public void Validate_RejectsBothTimeAndMoveLimit()
+    {
+        LevelData level = TwoRowLevel();
+        level.timeLimit = 60f;   // TwoRowLevel đang dùng giới hạn lượt, thêm thời gian là sai
+        Assert.IsFalse(level.Validate(out string error));
+        StringAssert.Contains("cả timeLimit lẫn moveLimit", error);
+    }
+
+    [Test]
     public void Validate_RejectsClueSumNotEqualToActiveCells()
     {
         var level = MakeLevel(2, 2, new[] { Clue(0, 0, 3) });
-        level.moveLimit = 4;
+        WithMoves(level, 4);
         Assert.IsFalse(level.Validate(out _));
     }
 
@@ -128,7 +145,7 @@ public class RoomRulesTests
         var clue = Clue(0, 0, 6);
         clue.type = ClueType.Square;
         var level = MakeLevel(2, 3, new[] { clue });
-        level.moveLimit = 4;
+        WithMoves(level, 4);
         Assert.IsFalse(level.Validate(out _));
     }
 
@@ -139,7 +156,7 @@ public class RoomRulesTests
         locked.type = ClueType.Locked;
         locked.unlockRoomCount = 5;
         var level = MakeLevel(2, 2, new[] { locked, Clue(1, 0, 2) });
-        level.moveLimit = 4;
+        WithMoves(level, 4);
         Assert.IsFalse(level.Validate(out _));
     }
     
@@ -233,7 +250,7 @@ public class RoomRulesTests
     public void LevelCollection_RoundTripsThroughJson()
     {
         LevelData level = MakeLevel(4, 4, new[] { Clue(0, 0, 16, ClueType.Hidden) });
-        level.moveLimit = 5;
+        WithMoves(level, 5);
         var original = new LevelCollection { version = 1, levels = new[] { level } };
 
         LevelCollection parsed = LevelLoader.Parse(LevelLoader.ToJson(original));

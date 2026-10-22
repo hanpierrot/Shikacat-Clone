@@ -31,7 +31,9 @@ public class GridManager : MonoSingleton<GridManager>
     public float CellSize => cellSize;
     public IReadOnlyList<Room> Rooms => rooms;
     public int ClueCount => config != null ? config.clues.Length : 0;
+    public LevelData Level => config;
     public bool IsReplacingRooms { get; private set; }
+    public bool IsRevealing { get; set; }
 
     public RoomCheckResult CheckRoom(int minRow, int maxRow, int minCol, int maxCol, out LevelData.ClueEntry clue)
         => RoomRules.Check(config, rooms, minRow, maxRow, minCol, maxCol, out clue);

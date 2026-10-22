@@ -605,22 +605,17 @@ public static class LevelGenerator
 
         int moves = n + tier.moveSlack;
         float time = RoundToFive(tier.timeBase + tier.timePerRoom * n);
-        GeneratorConfig.LimitSchedule schedule = config.limitSchedule;
 
-        switch (mode)
+        // Mỗi level chỉ có một loại limit
+        if (mode == LimitMode.Timer)
         {
-            case LimitMode.Timer:
-                level.timeLimit = time;
-                level.moveLimit = 0;
-                break;
-            case LimitMode.Moves:
-                level.timeLimit = 0f;
-                level.moveLimit = moves;
-                break;
-            default:
-                level.timeLimit = RoundToFive(time * schedule.bothTimeFactor);
-                level.moveLimit = moves + schedule.bothMoveExtra;
-                break;
+            level.timeLimit = time;
+            level.moveLimit = 0;
+        }
+        else
+        {
+            level.timeLimit = 0f;
+            level.moveLimit = moves;
         }
 
         level.Prepare();

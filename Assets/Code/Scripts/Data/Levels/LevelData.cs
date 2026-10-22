@@ -94,7 +94,13 @@ public class LevelData
 
         if (!HasTimeLimit && !HasMoveLimit)
         {
-            error = "Cần ít nhất một trong timeLimit hoặc moveLimit lớn hơn 0 (hiện cả hai đều bằng 0)"; 
+            error = "Cần đúng một loại limit: timeLimit hoặc moveLimit lớn hơn 0 (hiện cả hai đều bằng 0)"; 
+            return false;
+        }
+        
+        if (HasTimeLimit && HasMoveLimit)
+        {
+            error = "Level không được dùng cả timeLimit lẫn moveLimit";
             return false;
         }
 
