@@ -208,6 +208,8 @@ public class GameManager : MonoSingleton<GameManager>
         UpdateMovesHud();
     }
     
+    public void CheatEndFreeze() => EndFreeze();
+    
     public void CheatGoToLevel(int levelNumber) => LoadLevel(levelNumber - 1);
     
     public void CheatRestart() => LoadLevel(currentLevelIndex);

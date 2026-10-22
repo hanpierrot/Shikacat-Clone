@@ -24,6 +24,7 @@ public class BoosterManager : MonoSingleton<BoosterManager>
     };
     
     [SerializeField] private int unlockGrant = 2;
+    public bool UnlimitedBoosters { get; set; }
     [SerializeField] private BoosterPurchasePopup purchasePopup;
     
     public event Action<BoosterType> Unlocked;
@@ -72,8 +73,8 @@ public class BoosterManager : MonoSingleton<BoosterManager>
     {
         GameManager gm = GameManager.Instance;
         if (gm == null || gm.IsGameOver || !IsUnlocked(type)) return false;
-        
-        if (BoosterInventory.Count(type) <= 0)
+
+        if (!UnlimitedBoosters && BoosterInventory.Count(type) <= 0)
         {
             RequestPurchase(type);
             return false;
@@ -88,7 +89,7 @@ public class BoosterManager : MonoSingleton<BoosterManager>
 
         if (!handler()) return false;
 
-        BoosterInventory.TryConsume(type);
+        if (!UnlimitedBoosters) BoosterInventory.TryConsume(type);
         Used?.Invoke(type);
         return true;
     }
@@ -112,6 +113,25 @@ public class BoosterManager : MonoSingleton<BoosterManager>
     
     public void Consume(BoosterType type)
     {
+        if (UnlimitedBoosters)
+        {
+            Used?.Invoke(type);
+            return;
+        }
+
         if (BoosterInventory.TryConsume(type)) Used?.Invoke(type);
+    }
+    
+    public void CheatUnlock(BoosterType type)
+    {
+        if (!BoosterInventory.IsGranted(type)) BoosterInventory.Add(type, unlockGrant);
+        BoosterInventory.MarkGranted(type);
+        Unlocked?.Invoke(type);
+    }
+
+    public void CheatUse(BoosterType type)
+    {
+        Func<bool> handler = handlers[(int)type];
+        if (handler != null && handler()) Used?.Invoke(type);
     }
 }
