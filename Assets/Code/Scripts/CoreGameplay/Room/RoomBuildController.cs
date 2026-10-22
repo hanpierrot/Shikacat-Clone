@@ -238,7 +238,7 @@ public class RoomBuildController : MonoBehaviour
     {
         LastReleaseWorldPosition = GridManager.Instance.GridToWorld(originRow, originCol);
         Room room = GridManager.Instance.CommitRoom(minRow, maxRow, minCol, maxCol);
-        SpawnRoomPanel(room);
+        SpawnRoomPanel(room, LastReleaseWorldPosition);
         return room;
     }
     
@@ -248,7 +248,7 @@ public class RoomBuildController : MonoBehaviour
         
         LastReleaseWorldPosition = GridManager.Instance.GridToWorld(lastCellRow, lastCellCol);
         Room room = GridManager.Instance.CommitRoom(currentMinRow, currentMaxRow, currentMinCol, currentMaxCol);
-        SpawnRoomPanel(room);
+        SpawnRoomPanel(room, GridManager.Instance.GridToWorld(startRow, startCol));
     }
 
     private void SetPreviewBounds(int minRow, int maxRow, int minCol, int maxCol)
@@ -303,7 +303,7 @@ public class RoomBuildController : MonoBehaviour
         dragPreviewOverlay.gameObject.SetActive(true);
     }
 
-    private void SpawnRoomPanel(Room room)
+    private void SpawnRoomPanel(Room room, Vector3 growOrigin)
     {
         if (roomPanelPrefab == null || catPalette == null)
         {
@@ -345,7 +345,7 @@ public class RoomBuildController : MonoBehaviour
         {
             room.IsPlacing = false;
             panel.SetCat(room.Color, () => RoomAnimationFinished?.Invoke(room));
-        });
+        }, growOrigin);
     }
     
     private CatColor PickColor(Room room)
