@@ -29,9 +29,7 @@ public class GameManager : MonoSingleton<GameManager>
     [SerializeField] private LevelHud hud;
     
     [Header("Win FX")]
-    [SerializeField] private GameObject shotFx;
     [SerializeField] private float roomAnimationTimeout = 3f;
-    [SerializeField] private float panelDelayAfterShot = 0.3f;
     
     [Header("Game Over Panel")]
     [SerializeField] private GameObject gameOverPanel;
@@ -272,7 +270,6 @@ public class GameManager : MonoSingleton<GameManager>
         revivesUsed = 0;
         ClosePopups();
         if (winAnim != null) winAnim.gameObject.SetActive(false);
-        if (shotFx != null) shotFx.SetActive(false); 
         if (collectButton != null) collectButton.Hide();
         if (coinHud != null) coinHud.Release(false);
         if (mainMenuButton != null) mainMenuButton.gameObject.SetActive(false);
@@ -500,12 +497,6 @@ public class GameManager : MonoSingleton<GameManager>
         {
             waited += Time.deltaTime;
             yield return null;
-        }
-
-        if (shotFx != null)
-        {
-            shotFx.SetActive(true);
-            if (panelDelayAfterShot > 0f) yield return new WaitForSeconds(panelDelayAfterShot); 
         }
 
         gameOverRoutine = null;

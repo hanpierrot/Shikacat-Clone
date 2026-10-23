@@ -20,6 +20,7 @@ public class WinAnimController : MonoBehaviour
     [SerializeField] private float fallTime = 0.3f;
 
     [Header("Reward")]
+    [SerializeField] private GameObject shotFx;
     [SerializeField] private GameObject dropFx;
     [SerializeField] private GameObject coinRoot;
     [SerializeField] private WinStarsPanel starsPanel;
@@ -30,7 +31,6 @@ public class WinAnimController : MonoBehaviour
     private bool playing;
     private bool rewardShown;
     private int pendingReward;
-    private int pendingStars;
 
     private void OnEnable()
     {
@@ -42,6 +42,7 @@ public class WinAnimController : MonoBehaviour
         if (collectButton != null) collectButton.Clicked -= HandleCollectClicked;
 
         Stop();
+        if (shotFx != null) shotFx.SetActive(false);
         if (dropFx != null) dropFx.SetActive(false);
         if (collectButton != null) collectButton.Hide();
     }
@@ -73,12 +74,18 @@ public class WinAnimController : MonoBehaviour
         playing = true;
         rewardShown = false;
         pendingReward = reward;
-        pendingStars = stars;
 
         if (dropFx != null) dropFx.SetActive(false);
         if (coinRoot != null) coinRoot.SetActive(false);
-        if (starsPanel != null) starsPanel.Hide();
         if (collectButton != null) collectButton.Hide();
+
+        // Bảng điều khiển vừa bật: ShotFX nổ, Well-Done mở và bảng sao hiện cùng lúc
+        if (shotFx != null)
+        {
+            shotFx.SetActive(false);
+            shotFx.SetActive(true);
+        }
+        if (starsPanel != null) starsPanel.Play(stars);
 
         wellDone.gameObject.SetActive(true);
         wellDone.AnimationState.SetAnimation(0, "levelpass_victory_open", false);
@@ -109,7 +116,7 @@ public class WinAnimController : MonoBehaviour
             if (i == 0) sequence.Append(hover); else sequence.Join(hover);
         }
 
-        // 3. Ngay khi mèo bắt đầu rơi: tắt Well-Done, hiện coin, sao và nút Collect (chạy chồng)
+        // 3. Ngay khi mèo bắt đầu rơi: hiện coin và nút Collect (chạy chồng)
         sequence.AppendCallback(ShowReward);
 
         for (int i = 0; i < catRoots.Length; i++)
@@ -135,8 +142,6 @@ public class WinAnimController : MonoBehaviour
         if (rewardShown) return;
         rewardShown = true;
 
-        wellDone.gameObject.SetActive(false);
-
         if (coinRoot != null)
         {
             coinRoot.SetActive(true);
@@ -146,7 +151,6 @@ public class WinAnimController : MonoBehaviour
 
         coin.AnimationState.SetAnimation(0, "rotation", true);
 
-        if (starsPanel != null) starsPanel.Play(pendingStars);
         if (collectButton != null) collectButton.Show(pendingReward);
     }
 
@@ -163,6 +167,7 @@ public class WinAnimController : MonoBehaviour
         }
 
         // Chốt cuối: dù callback có bị bỏ lỡ thì trạng thái cuối vẫn đúng
+        if (shotFx != null && !shotFx.activeSelf) shotFx.SetActive(true);
         ShowReward();
         foreach (RectTransform root in catRoots) root.gameObject.SetActive(false);
         if (dropFx != null) dropFx.SetActive(true);
