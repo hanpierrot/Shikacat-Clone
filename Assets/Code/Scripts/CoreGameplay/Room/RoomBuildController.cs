@@ -234,6 +234,23 @@ public class RoomBuildController : MonoBehaviour
         isPressValid = false;
     }
     
+    // Dựng phòng đáp án miễn phí: không tốn lượt, không tính combo
+    public Room BuildSolutionRoom(LevelData.SolutionRoom sol)
+    {
+        GridManager grid = GridManager.Instance;
+        LevelData.ClueEntry clue = grid.Level.clues[sol.clueIndex];
+
+        grid.IsRevealing = true;
+        try
+        {
+            return BuildRoom(sol.row, sol.row + sol.height - 1, sol.col, sol.col + sol.width - 1, clue.row, clue.col);
+        }
+        finally
+        {
+            grid.IsRevealing = false;
+        }
+    }
+
     public Room BuildRoom(int minRow, int maxRow, int minCol, int maxCol, int originRow, int originCol)
     {
         LastReleaseWorldPosition = GridManager.Instance.GridToWorld(originRow, originCol);

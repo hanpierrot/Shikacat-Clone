@@ -18,9 +18,9 @@ public class BoosterManager : MonoSingleton<BoosterManager>
 
     [SerializeField] private Entry[] entries =
     {
-        new Entry { type = BoosterType.Hint, unlockLevel = 5, price = 100, packSize = 1, description = "Highlights one correct room for you." },
-        new Entry { type = BoosterType.Freeze, unlockLevel = 8, price = 150, packSize = 1, description = "Freezes the timer and moves for 10 seconds." },
-        new Entry { type = BoosterType.Reveal, unlockLevel = 12, price = 200, packSize = 1, description = "Tap a clue to build its correct room instantly." }
+        new Entry { type = BoosterType.Hint, unlockLevel = 5, price = 100, packSize = 1, description = "Hint will automatically complete one correct region!" },
+        new Entry { type = BoosterType.Freeze, unlockLevel = 7, price = 150, packSize = 1, description = "Freeze the timer and dominate for 10 seconds!" },
+        new Entry { type = BoosterType.Reveal, unlockLevel = 9, price = 200, packSize = 1, description = "Select a number to solve all matching regions!" }
     };
     
     [SerializeField] private int unlockGrant = 2;

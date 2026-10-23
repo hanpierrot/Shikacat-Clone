@@ -384,10 +384,10 @@
   },
   "mechanics": {
     "holesFromLevel": 6,
-    "hiddenFromLevel": 8,
-    "directionalFromLevel": 10,
-    "lockedFromLevel": 13,
-    "comboFromLevel": 15,
+    "hiddenFromLevel": 19,
+    "directionalFromLevel": 9,
+    "lockedFromLevel": 14,
+    "comboFromLevel": 24,
     "introduceAtUnlock": true
   },
   "gridCurve": [

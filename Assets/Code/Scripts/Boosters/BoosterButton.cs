@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -35,12 +36,20 @@ public class BoosterButton : MonoBehaviour
         if (button.interactable != usable) button.interactable = usable;
     }
 
+    public event Action Clicked;
+
+    public RectTransform Rect => (RectTransform)transform;
+
     public void SetActiveMark(bool active)
     {
         if (activeMark != null) activeMark.SetActive(active);
     }
 
-    private void OnClick() => BoosterManager.Instance.TryUse(type);
+    private void OnClick()
+    {
+        Clicked?.Invoke();   // Tutorial gỡ overlay trước khi booster chạy
+        BoosterManager.Instance.TryUse(type);
+    }
 
     private void HandleInventoryChanged(BoosterType changed, int count)
     {

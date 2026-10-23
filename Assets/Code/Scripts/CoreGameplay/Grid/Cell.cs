@@ -23,6 +23,11 @@ public class Cell : MonoBehaviour
     [SerializeField] private float holdTime = 0.08f;
     [SerializeField] private float revealPunch = 0.25f;
     
+    [Header("Highlight")]
+    [SerializeField] private SpriteRenderer body;   // Để trống thì lấy SpriteRenderer trên chính Cell
+    [SerializeField] private Color highlightColor = new Color(1f, 0.92f, 0.4f, 1f);
+    [SerializeField] private float highlightPulse = 0.5f;
+
     public int ClueValue { get; private set; }
     public ClueType ClueType { get; private set; }
     public bool HasClue => ClueValue > 0;
@@ -35,6 +40,10 @@ public class Cell : MonoBehaviour
     private Vector3 valueLabelRestScale;
     private bool restCached;
 
+    private Color bodyRestColor;
+    private bool bodyCached;
+    private Tween highlightTween;
+
     private void CacheRest()
     {
         if (restCached) return;
@@ -43,10 +52,32 @@ public class Cell : MonoBehaviour
         restCached = true;
     }
     
+    public void SetHighlight(bool on)
+    {
+        if (body == null) body = GetComponent<SpriteRenderer>();
+        if (body == null) return;
+
+        if (!bodyCached)
+        {
+            bodyRestColor = body.color;
+            bodyCached = true;
+        }
+
+        if (highlightTween != null && highlightTween.IsActive()) highlightTween.Kill();
+        highlightTween = null;
+        body.color = bodyRestColor;
+        if (!on) return;
+
+        highlightTween = DOTween.To(() => 0f, v => body.color = Color.Lerp(bodyRestColor, highlightColor, v), 1f, highlightPulse)
+            .SetLoops(-1, LoopType.Yoyo)
+            .SetEase(Ease.InOutSine);
+    }
+
     public void Init(bool hasClue, LevelData.ClueEntry clue)
     {
         CacheRest();
         KillUnlock();
+        SetHighlight(false);
         lockShown = false;
         
         ClueValue = hasClue ? clue.value : 0;
@@ -177,6 +208,7 @@ public class Cell : MonoBehaviour
     private void OnDisable()
     {
         KillUnlock();
+        SetHighlight(false);
     }
 
 
