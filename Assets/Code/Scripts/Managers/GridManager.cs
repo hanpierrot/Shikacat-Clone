@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DG.Tweening;
 using UnityEngine;
 
 public class GridManager : MonoSingleton<GridManager>
@@ -16,6 +17,14 @@ public class GridManager : MonoSingleton<GridManager>
     [Header("Layout")]
     [SerializeField] private Vector2 outerPadding = Vector2.zero;
     [SerializeField, Range(0f, 1f)] private float spacingRatio = 0.1f;
+
+    [Header("Cell Intro")]
+    [SerializeField] private bool playCellIntro = true;
+    [SerializeField] private float cellPopTime = 0.25f;
+    [SerializeField] private float cellStagger = 0.03f;       // Trễ giữa hai ô liên tiếp (trái sang phải, trên xuống dưới)
+    [SerializeField] private float cellIntroMaxDelay = 0.6f;  // Giới hạn tổng độ trễ để lưới lớn không phải chờ lâu
+
+    public float CellIntroDuration { get; private set; }   // Thời gian để toàn bộ ô phóng to xong sau BuildGrid
 
     public event Action<Room> RoomRemoved;
     public event Action<Room> RoomCommitted;
@@ -62,8 +71,12 @@ public class GridManager : MonoSingleton<GridManager>
         
         EnsurePoolSize(config.ActiveCellCount);
         
+        DOTween.Kill(this);
         cells = new Cell[config.rows, config.columns];
         int index = 0;
+        float stagger = config.ActiveCellCount > 1
+            ? Mathf.Min(cellStagger, cellIntroMaxDelay / (config.ActiveCellCount - 1))
+            : 0f;
         for (int r = 0; r < config.rows; r++)
         {
             for (int c = 0; c < config.columns; c++)
@@ -72,8 +85,20 @@ public class GridManager : MonoSingleton<GridManager>
                 
                 Cell cell = cellPool[index];
                 cell.transform.position = GridToWorld(r, c);
-                cell.transform.localScale = Vector3.one * cellSize;
                 cell.gameObject.SetActive(true);
+                if (playCellIntro)
+                {
+                    // Duyệt theo hàng từ trên xuống, mỗi hàng từ trái sang phải; ô tắt (hole) không chiếm lượt
+                    cell.transform.localScale = Vector3.zero;
+                    cell.transform.DOScale(Vector3.one * cellSize, cellPopTime)
+                        .SetDelay(index * stagger)
+                        .SetEase(Ease.OutBack)
+                        .SetId(this);
+                }
+                else
+                {
+                    cell.transform.localScale = Vector3.one * cellSize;
+                }
                 
                 bool hasClue = config.TryGetClue(r, c, out LevelData.ClueEntry clue);
                 
@@ -83,6 +108,8 @@ public class GridManager : MonoSingleton<GridManager>
                 index++;
             }
         }
+
+        CellIntroDuration = playCellIntro ? cellPopTime + Mathf.Max(0, index - 1) * stagger : 0f;
 
         for (int i = index; i < cellPool.Count; i++)
             cellPool[i].gameObject.SetActive(false);

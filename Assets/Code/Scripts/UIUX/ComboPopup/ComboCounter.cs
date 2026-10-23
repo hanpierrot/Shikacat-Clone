@@ -35,7 +35,7 @@ public class ComboCounter : MonoBehaviour
     
     private void HandleRoomCommitted(Room room)
     {
-        if (GridManager.Instance.IsRevealing) return;
+        if (GridManager.Instance.IsRevealing || GameManager.Instance.IsTutorial) return;
         SetCombo(Combo + 1);
         if (Combo < 2 || popup == null || buildController == null) return;
         
@@ -45,7 +45,7 @@ public class ComboCounter : MonoBehaviour
     
     private void HandleRoomRemoved(Room room)
     {
-        if (GridManager.Instance.IsRevealing) return;
+        if (GridManager.Instance.IsRevealing || GameManager.Instance.IsTutorial) return;
         SetCombo(0);
     }
     

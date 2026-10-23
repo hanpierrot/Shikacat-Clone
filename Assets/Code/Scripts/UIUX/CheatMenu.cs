@@ -103,6 +103,8 @@ public class CheatMenu : MonoBehaviour
         }
         if (GUILayout.Button("Save this level")) gm.CheatSaveCurrentLevel();
         GUILayout.EndHorizontal();
+        if (GUILayout.Button("Replay tutorial")) { gm.CheatReplayTutorial(); SetOpen(false); }
+        if (GUILayout.Button("Reset booster + mechanic tutorials")) { BoosterTutorial.ResetSeen(); MechanicIntro.ResetSeen(); }
 
         Header("Limits");
         GUILayout.BeginHorizontal();

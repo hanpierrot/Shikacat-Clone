@@ -57,6 +57,12 @@ public class GameManager : MonoSingleton<GameManager>
     
     [Header("Freeze Booster")]
     [SerializeField] private float freezeDuration = 10f;
+    
+    [Header("Tutorial")]
+    [SerializeField] private TutorialController tutorial;
+
+    public bool IsTutorial { get; set; }
+    public bool HasLevelLoaded => currentLevel != null;
 
     public const string EditorStartLevelKey = "Shikacat.StartLevelIndex";
     
@@ -149,7 +155,11 @@ public class GameManager : MonoSingleton<GameManager>
 
         int editorIndex = ConsumeEditorStartLevel();
         useEditorStart = editorIndex >= 0;
-        LoadLevel(useEditorStart ? editorIndex : PlayerProgress.LoadLevelIndex());
+        int startIndex = useEditorStart ? editorIndex : PlayerProgress.LoadLevelIndex();
+        if (!useEditorStart && tutorial != null && PlayerProgress.ShouldShowTutorial)
+            tutorial.Begin(() => LoadLevel(startIndex));
+        else
+            LoadLevel(startIndex);
         
         if (BoosterManager.Instance != null)
             BoosterManager.Instance.SetHandler(BoosterType.Freeze, TryFreeze);
@@ -157,6 +167,8 @@ public class GameManager : MonoSingleton<GameManager>
 
     private void Update()
     {
+        if (IsTutorial) return;
+
         TickFreeze();
         
         if (isGameOver || currentLevel == null || !currentLevel.HasTimeLimit || !timerRunning) return;
@@ -212,11 +224,22 @@ public class GameManager : MonoSingleton<GameManager>
     
     public void CheatRestart() => LoadLevel(currentLevelIndex);
 
+    public void CheatReplayTutorial()
+    {
+        if (tutorial == null || IsTutorial || isGameOver) return;
+
+        PlayerProgress.ClearTutorial();
+        int index = currentLevelIndex;
+        tutorial.Begin(() => LoadLevel(index));
+    }
+
     public void CheatSaveCurrentLevel() => PlayerProgress.SaveLevelIndex(currentLevelIndex);
 
     public void CheatClearSave()
     {
         PlayerProgress.Clear();
+        BoosterTutorial.ResetSeen();
+        MechanicIntro.ResetSeen();
         BoosterInventory.Clear();
         CoinWallet.Clear();
         LoadLevel(0);
@@ -330,7 +353,7 @@ public class GameManager : MonoSingleton<GameManager>
 
     private void HandleRoomCommitted(Room room)
     {
-        if (isLoading || isGameOver) return;
+        if (IsTutorial || isLoading || isGameOver) return;
         
         ConsumeMove();
         
@@ -345,7 +368,7 @@ public class GameManager : MonoSingleton<GameManager>
     
     private void HandleRoomRemoved(Room room)
     {
-        if (isLoading || isGameOver || GridManager.Instance.IsReplacingRooms) return;
+        if (IsTutorial || isLoading || isGameOver || GridManager.Instance.IsReplacingRooms) return;
 
         ConsumeMove();
         CheckMoveLimitLose();
@@ -547,8 +570,9 @@ public class GameManager : MonoSingleton<GameManager>
 
     private bool TryFreeze()
     {
-        if (isGameOver || currentLevel == null || !timerRunning || IsFrozen) return false;
+        if (isGameOver || currentLevel == null || IsFrozen) return false;
         
+        // Dùng trước khi đồng hồ bắt đầu thì thời gian đóng băng chỉ chạy khi người chơi bắt đầu chơi
         freezeTimeLeft = freezeDuration;
         if (hud != null) hud.SetFrozen(true);
         return true;
@@ -563,7 +587,7 @@ public class GameManager : MonoSingleton<GameManager>
             EndFreeze();
             return;
         }
-        if (TimerPaused) return;
+        if (TimerPaused || !timerRunning) return;
 
         freezeTimeLeft -= Time.deltaTime;
         if (freezeTimeLeft <= 0f) EndFreeze();
