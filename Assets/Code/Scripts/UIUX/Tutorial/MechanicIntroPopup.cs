@@ -49,6 +49,7 @@ public class MechanicIntroPopup : MonoBehaviour
 
     public void Show(MechanicIntro.Mechanic mechanic)
     {
+        AudioManager.PlaySfx(Sfx.UnlockObstacle);
         gameObject.SetActive(true);
         Clear();
 

@@ -58,6 +58,7 @@ public class CollectButton : MonoBehaviour
     private void OnClick()
     {
         if (collecting) return;
+        AudioManager.PlaySfx(Sfx.EarnCoin);
         collecting = true;
         button.interactable = false;
 

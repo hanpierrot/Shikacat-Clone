@@ -55,17 +55,7 @@ public class GridManager : MonoSingleton<GridManager>
         config = newLevel;
         lockedCells.Clear();
         
-        Vector2 visibleSize = CameraViewport.GetVisibleWorldSize(targetCamera);
-        Vector2 boardSize = new Vector2(visibleSize.x * boardWidthPercent, visibleSize.y * boardHeightPercent);
-        
-        float availableWidth = boardSize.x - 2f * outerPadding.x;
-        float availableHeight = boardSize.y - 2f * outerPadding.y;
-
-        float cellSizeX = availableWidth / (config.columns + (config.columns - 1) * spacingRatio);
-        float cellSizeY = availableHeight / (config.rows + (config.rows - 1) * spacingRatio);
-
-        cellSize = Mathf.Min(cellSizeX, cellSizeY);
-        step = cellSize * (1f + spacingRatio);
+        ComputeSizes();
 
         SyncPoolWithScene();
         
@@ -113,6 +103,41 @@ public class GridManager : MonoSingleton<GridManager>
 
         for (int i = index; i < cellPool.Count; i++)
             cellPool[i].gameObject.SetActive(false);
+    }
+
+    private void ComputeSizes()
+    {
+        Vector2 visibleSize = CameraViewport.GetVisibleWorldSize(targetCamera);
+        Vector2 boardSize = new Vector2(visibleSize.x * boardWidthPercent, visibleSize.y * boardHeightPercent);
+
+        float availableWidth = boardSize.x - 2f * outerPadding.x;
+        float availableHeight = boardSize.y - 2f * outerPadding.y;
+
+        float cellSizeX = availableWidth / (config.columns + (config.columns - 1) * spacingRatio);
+        float cellSizeY = availableHeight / (config.rows + (config.rows - 1) * spacingRatio);
+
+        cellSize = Mathf.Min(cellSizeX, cellSizeY);
+        step = cellSize * (1f + spacingRatio);
+    }
+
+    public void Relayout()
+    {
+        if (config == null || cells == null) return;
+
+        ComputeSizes();
+        bool intro = DOTween.IsTweening(this);
+
+        for (int r = 0; r < config.rows; r++)
+        {
+            for (int c = 0; c < config.columns; c++)
+            {
+                Cell cell = cells[r, c];
+                if (cell == null) continue;
+
+                cell.transform.position = GridToWorld(r, c);
+                if (!intro) cell.transform.localScale = Vector3.one * cellSize;
+            }
+        }
     }
 
     private void SyncPoolWithScene()

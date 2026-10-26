@@ -20,6 +20,7 @@ public class WinStarsPanel : MonoBehaviour
     // count = số sao sáng (0 đến 3). Tất cả bắt đầu ở sprite tắt, rồi sáng lần lượt
     public void Play(int count)
     {
+        AudioManager.PlaySfx(Sfx.PoofStar);
         Kill();
         gameObject.SetActive(true);
         litCount = Mathf.Clamp(count, 0, stars.Length);

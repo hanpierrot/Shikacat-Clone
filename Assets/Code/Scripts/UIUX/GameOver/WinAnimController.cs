@@ -25,6 +25,7 @@ public class WinAnimController : MonoBehaviour
     [SerializeField] private GameObject coinRoot;
     [SerializeField] private WinStarsPanel starsPanel;
     [SerializeField] private CollectButton collectButton;
+    [SerializeField] private CoinHud coinHud;
 
     private Sequence sequence;
     private Vector2[] restPositions;
@@ -34,12 +35,14 @@ public class WinAnimController : MonoBehaviour
 
     private void OnEnable()
     {
+        if (coinHud != null) coinHud.gameObject.SetActive(true);
         if (collectButton != null) collectButton.Clicked += HandleCollectClicked;
     }
 
     private void OnDisable()
     {
         if (collectButton != null) collectButton.Clicked -= HandleCollectClicked;
+        if (coinHud != null) coinHud.gameObject.SetActive(false);
 
         Stop();
         if (shotFx != null) shotFx.SetActive(false);
@@ -141,6 +144,7 @@ public class WinAnimController : MonoBehaviour
     {
         if (rewardShown) return;
         rewardShown = true;
+        AudioManager.PlaySfx(Sfx.EarnReward);
 
         if (coinRoot != null)
         {

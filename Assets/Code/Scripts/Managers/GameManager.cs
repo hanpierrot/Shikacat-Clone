@@ -74,6 +74,13 @@ public class GameManager : MonoSingleton<GameManager>
     public event Action LevelLoaded;
     public event Action<float, float> FreezeProgress;
     public event Action FreezeEnded;
+    public event Action WinShown;
+    public event Action LoseShown;
+    public event Action LowTimeWarning;
+    public event Action Revived;
+
+    [SerializeField] private float lowTimeWarningSeconds = 10f;
+    private bool lowTimeWarned;
     
     private LevelData[] levels;
     private LevelData currentLevel;
@@ -187,6 +194,13 @@ public class GameManager : MonoSingleton<GameManager>
         if (UnlimitedTime || IsFrozen) return;
         
         timeRemaining -= Time.deltaTime;
+        
+        if (!lowTimeWarned && currentLevel.timeLimit > lowTimeWarningSeconds * 1.5f && timeRemaining <= lowTimeWarningSeconds)
+        {
+            lowTimeWarned = true;
+            LowTimeWarning?.Invoke();
+        }
+        
         if (timeRemaining <= 0)
         {
             timeRemaining = 0;
@@ -294,6 +308,7 @@ public class GameManager : MonoSingleton<GameManager>
         }
         
         EndFreeze(true);
+        lowTimeWarned = false;
 
         isGameOver = false;
         timerRunning = false;
@@ -441,6 +456,7 @@ public class GameManager : MonoSingleton<GameManager>
     {
         if (isGameOver) return;
         isGameOver = true;
+        LoseShown?.Invoke();
 
         lostByTimeOut = byTimeOut;
 
@@ -484,6 +500,8 @@ public class GameManager : MonoSingleton<GameManager>
         if (currentLevel.HasMoveLimit) UpdateMovesHud();
 
         timerRunning = true;
+        lowTimeWarned = false;
+        Revived?.Invoke();
     }
 
     private void HandleReviveDeclined()
@@ -554,6 +572,7 @@ public class GameManager : MonoSingleton<GameManager>
 
         if (winAnim != null) winAnim.gameObject.SetActive(false);
         if (gameOverPanel != null) gameOverPanel.SetActive(true);
+        WinShown?.Invoke();
         
         if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(false);
         if (mainMenuButton != null) mainMenuButton.gameObject.SetActive(false);

@@ -162,6 +162,7 @@ public class Cell : MonoBehaviour
 
     private void PlayUnlock()
     {
+        AudioManager.PlaySfx(Sfx.UnlockObstacle);
         lockShown = false;
         if (lockCountLabel != null) lockCountLabel.gameObject.SetActive(false);
         

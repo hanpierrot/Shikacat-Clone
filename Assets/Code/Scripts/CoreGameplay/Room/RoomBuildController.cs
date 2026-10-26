@@ -251,6 +251,20 @@ public class RoomBuildController : MonoBehaviour
         }
     }
 
+    public void RelayoutRooms()
+    {
+        GridManager grid = GridManager.Instance;
+        float scaleFactor = grid.CellSize / referenceCellSize;
+
+        foreach (Room room in grid.Rooms)
+        {
+            if (room.Visual == null || room.IsPlacing) continue;
+
+            grid.GetWorldRect(room.MinRow, room.MaxRow, room.MinColumn, room.MaxColumn, out Vector3 center, out Vector2 size);
+            room.Visual.Relayout(center, size, scaleFactor);
+        }
+    }
+
     public Room BuildRoom(int minRow, int maxRow, int minCol, int maxCol, int originRow, int originCol)
     {
         LastReleaseWorldPosition = GridManager.Instance.GridToWorld(originRow, originCol);

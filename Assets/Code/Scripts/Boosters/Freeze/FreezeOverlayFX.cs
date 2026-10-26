@@ -24,11 +24,6 @@ public class FreezeOverlayFX : MonoBehaviour
     [SerializeField] private GameObject freezeBurstRoot;
     [SerializeField] private float bordersFade = 0.4f;
 
-    [Header("Audio")]
-    [SerializeField] private AudioSource audioSource;
-    [SerializeField] private AudioClip startClip;
-    [SerializeField] private AudioClip appearClip;
-    [SerializeField] private AudioClip warningClip;
 
     private Vector2 handRest;
     private Vector2 rootRest;
@@ -70,7 +65,7 @@ public class FreezeOverlayFX : MonoBehaviour
         snowflake.gameObject.SetActive(false);
         touchFx.gameObject.SetActive(false);
 
-        PlayClip(startClip);
+        AudioManager.PlaySfx(Sfx.FreezeStart);
 
         intro = DOTween.Sequence().SetTarget(this);
         
@@ -104,7 +99,7 @@ public class FreezeOverlayFX : MonoBehaviour
         intro.OnKill(() => intro = null);
     }
     
-    public void PlayWarning() => PlayClip(warningClip);
+    public void PlayWarning() => AudioManager.PlaySfx(Sfx.EndTimeWarning);
 
     public void Stop(bool immediate)
     {
@@ -151,7 +146,7 @@ public class FreezeOverlayFX : MonoBehaviour
 
     private void ShowBorders()
     {
-        PlayClip(appearClip);
+        AudioManager.PlaySfx(Sfx.FreezeAppear);
 
         freezeBorders.gameObject.SetActive(true);
         freezeBorders.alpha = 0f;
@@ -190,9 +185,5 @@ public class FreezeOverlayFX : MonoBehaviour
         image.color = c;
     }
 
-    private void PlayClip(AudioClip clip)
-    {
-        if (audioSource != null && clip != null) audioSource.PlayOneShot(clip);
-    }
 
 }
