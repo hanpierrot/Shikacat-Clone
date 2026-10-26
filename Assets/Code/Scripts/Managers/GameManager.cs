@@ -58,15 +58,22 @@ public class GameManager : MonoSingleton<GameManager>
     [Header("Freeze Booster")]
     [SerializeField] private float freezeDuration = 10f;
     
+    [Header("Freeze FX")]
+    [SerializeField] private FreezeOverlayFX freezeFx;
+    [SerializeField] private float freezeWarningTime = 3f;
+    
     [Header("Tutorial")]
     [SerializeField] private TutorialController tutorial;
-
+    
     public bool IsTutorial { get; set; }
     public bool HasLevelLoaded => currentLevel != null;
+    public bool LevelStarted => timerRunning;   // Người chơi đã chạm vào một ô của lưới (đồng hồ/booster bắt đầu hoạt động)
 
     public const string EditorStartLevelKey = "Shikacat.StartLevelIndex";
     
     public event Action LevelLoaded;
+    public event Action<float, float> FreezeProgress;
+    public event Action FreezeEnded;
     
     private LevelData[] levels;
     private LevelData currentLevel;
@@ -86,8 +93,12 @@ public class GameManager : MonoSingleton<GameManager>
     private bool lostByTimeOut;
     private int revivesUsed;
     private float freezeTimeLeft;
+    private bool freezeIntro;
+    private bool freezeWarned;
 
     public bool IsFrozen => freezeTimeLeft > 0f;
+    public float FreezeRemaining => freezeTimeLeft;
+    public float FreezeDuration => freezeDuration;
 
     public bool IsGameOver => isGameOver;
     
@@ -218,7 +229,7 @@ public class GameManager : MonoSingleton<GameManager>
         UpdateMovesHud();
     }
     
-    public void CheatEndFreeze() => EndFreeze();
+    public void CheatEndFreeze() => EndFreeze(true);
     
     public void CheatGoToLevel(int levelNumber) => LoadLevel(levelNumber - 1);
     
@@ -282,7 +293,7 @@ public class GameManager : MonoSingleton<GameManager>
             gameOverRoutine = null;
         }
         
-        EndFreeze();
+        EndFreeze(true);
 
         isGameOver = false;
         timerRunning = false;
@@ -572,11 +583,23 @@ public class GameManager : MonoSingleton<GameManager>
     {
         if (isGameOver || currentLevel == null || IsFrozen) return false;
         
-        // Dùng trước khi đồng hồ bắt đầu thì thời gian đóng băng chỉ chạy khi người chơi bắt đầu chơi
         freezeTimeLeft = freezeDuration;
-        if (hud != null) hud.SetFrozen(true);
+        freezeWarned = false;
+        freezeIntro = freezeFx != null;
+        FreezeProgress?.Invoke(freezeTimeLeft, freezeDuration);
+
+        if (freezeFx != null) freezeFx.PlayIntro(HandleFreezeBordersShown);
+        else if (hud != null) hud.SetFrozen(true);
+
         return true;
     }
+    
+    private void HandleFreezeBordersShown()
+    {
+        freezeIntro = false;
+        if (hud != null && IsFrozen) hud.SetFrozen(true);
+    }
+
     
     private void TickFreeze()
     {
@@ -587,16 +610,31 @@ public class GameManager : MonoSingleton<GameManager>
             EndFreeze();
             return;
         }
-        if (TimerPaused || !timerRunning) return;
+        if (freezeIntro || TimerPaused || !timerRunning) return;
 
         freezeTimeLeft -= Time.deltaTime;
-        if (freezeTimeLeft <= 0f) EndFreeze();
+        if (freezeTimeLeft <= 0f)
+        {
+            EndFreeze();
+            return;
+        }
+
+        FreezeProgress?.Invoke(freezeTimeLeft, freezeDuration);
+
+        if (!freezeWarned && freezeTimeLeft <= freezeWarningTime)
+        {
+            freezeWarned = true;
+            if (freezeFx != null) freezeFx.PlayWarning();
+        }
     }
 
-    private void EndFreeze()
+    private void EndFreeze(bool immediate = false)
     {
         freezeTimeLeft = 0f;
+        freezeIntro = false;
         if (hud != null) hud.SetFrozen(false);
+        if (freezeFx != null) freezeFx.Stop(immediate);
+        FreezeEnded?.Invoke();
     }
     
     public void LoadNextLevel()

@@ -101,6 +101,7 @@ public class BoosterTutorial : MonoBehaviour
         addedCanvas.sortingOrder = overrideOrder;
         addedRaycaster = entry.button.gameObject.AddComponent<GraphicRaycaster>();
 
+        entry.button.ForceUsable = true;   // Tutorial hiện ngay đầu level nên nút phải bấm được dù level chưa bắt đầu
         entry.button.Clicked += HandleButtonClicked;
         panel.Show(entry.button.Rect, data != null ? data.description : string.Empty);
     }
@@ -119,6 +120,7 @@ public class BoosterTutorial : MonoBehaviour
 
         Entry entry = entries[activeIndex];
         entry.button.Clicked -= HandleButtonClicked;
+        entry.button.ForceUsable = false;
 
         if (addedRaycaster != null) Destroy(addedRaycaster);   // Raycaster phải bị hủy trước Canvas
         if (addedCanvas != null) Destroy(addedCanvas);
