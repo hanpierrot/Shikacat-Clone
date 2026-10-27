@@ -58,15 +58,29 @@ public class GameManager : MonoSingleton<GameManager>
     [Header("Freeze Booster")]
     [SerializeField] private float freezeDuration = 10f;
     
+    [Header("Freeze FX")]
+    [SerializeField] private FreezeOverlayFX freezeFx;
+    [SerializeField] private float freezeWarningTime = 3f;
+    
     [Header("Tutorial")]
     [SerializeField] private TutorialController tutorial;
-
+    
     public bool IsTutorial { get; set; }
     public bool HasLevelLoaded => currentLevel != null;
+    public bool LevelStarted => timerRunning;   // Người chơi đã chạm vào một ô của lưới (đồng hồ/booster bắt đầu hoạt động)
 
     public const string EditorStartLevelKey = "Shikacat.StartLevelIndex";
     
     public event Action LevelLoaded;
+    public event Action<float, float> FreezeProgress;
+    public event Action FreezeEnded;
+    public event Action WinShown;
+    public event Action LoseShown;
+    public event Action LowTimeWarning;
+    public event Action Revived;
+
+    [SerializeField] private float lowTimeWarningSeconds = 10f;
+    private bool lowTimeWarned;
     
     private LevelData[] levels;
     private LevelData currentLevel;
@@ -86,8 +100,12 @@ public class GameManager : MonoSingleton<GameManager>
     private bool lostByTimeOut;
     private int revivesUsed;
     private float freezeTimeLeft;
+    private bool freezeIntro;
+    private bool freezeWarned;
 
     public bool IsFrozen => freezeTimeLeft > 0f;
+    public float FreezeRemaining => freezeTimeLeft;
+    public float FreezeDuration => freezeDuration;
 
     public bool IsGameOver => isGameOver;
     
@@ -146,12 +164,14 @@ public class GameManager : MonoSingleton<GameManager>
         QualitySettings.vSyncCount = 0;
     }
 
-    private void Start()
+    private IEnumerator Start()
     {
         if (buildController == null)
             Debug.LogWarning("GameManager: RoomBuildController NOT FOUND.");
 
-        levels = LevelLoader.Load(levelsJson);
+        levels = LevelRepository.Get(levelsJson);
+
+        while (SceneLoader.IsCovering) yield return null;
 
         int editorIndex = ConsumeEditorStartLevel();
         useEditorStart = editorIndex >= 0;
@@ -176,6 +196,13 @@ public class GameManager : MonoSingleton<GameManager>
         if (UnlimitedTime || IsFrozen) return;
         
         timeRemaining -= Time.deltaTime;
+        
+        if (!lowTimeWarned && currentLevel.timeLimit > lowTimeWarningSeconds * 1.5f && timeRemaining <= lowTimeWarningSeconds)
+        {
+            lowTimeWarned = true;
+            LowTimeWarning?.Invoke();
+        }
+        
         if (timeRemaining <= 0)
         {
             timeRemaining = 0;
@@ -218,7 +245,7 @@ public class GameManager : MonoSingleton<GameManager>
         UpdateMovesHud();
     }
     
-    public void CheatEndFreeze() => EndFreeze();
+    public void CheatEndFreeze() => EndFreeze(true);
     
     public void CheatGoToLevel(int levelNumber) => LoadLevel(levelNumber - 1);
     
@@ -282,7 +309,8 @@ public class GameManager : MonoSingleton<GameManager>
             gameOverRoutine = null;
         }
         
-        EndFreeze();
+        EndFreeze(true);
+        lowTimeWarned = false;
 
         isGameOver = false;
         timerRunning = false;
@@ -430,6 +458,7 @@ public class GameManager : MonoSingleton<GameManager>
     {
         if (isGameOver) return;
         isGameOver = true;
+        LoseShown?.Invoke();
 
         lostByTimeOut = byTimeOut;
 
@@ -473,6 +502,8 @@ public class GameManager : MonoSingleton<GameManager>
         if (currentLevel.HasMoveLimit) UpdateMovesHud();
 
         timerRunning = true;
+        lowTimeWarned = false;
+        Revived?.Invoke();
     }
 
     private void HandleReviveDeclined()
@@ -543,6 +574,7 @@ public class GameManager : MonoSingleton<GameManager>
 
         if (winAnim != null) winAnim.gameObject.SetActive(false);
         if (gameOverPanel != null) gameOverPanel.SetActive(true);
+        WinShown?.Invoke();
         
         if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(false);
         if (mainMenuButton != null) mainMenuButton.gameObject.SetActive(false);
@@ -572,11 +604,23 @@ public class GameManager : MonoSingleton<GameManager>
     {
         if (isGameOver || currentLevel == null || IsFrozen) return false;
         
-        // Dùng trước khi đồng hồ bắt đầu thì thời gian đóng băng chỉ chạy khi người chơi bắt đầu chơi
         freezeTimeLeft = freezeDuration;
-        if (hud != null) hud.SetFrozen(true);
+        freezeWarned = false;
+        freezeIntro = freezeFx != null;
+        FreezeProgress?.Invoke(freezeTimeLeft, freezeDuration);
+
+        if (freezeFx != null) freezeFx.PlayIntro(HandleFreezeBordersShown);
+        else if (hud != null) hud.SetFrozen(true);
+
         return true;
     }
+    
+    private void HandleFreezeBordersShown()
+    {
+        freezeIntro = false;
+        if (hud != null && IsFrozen) hud.SetFrozen(true);
+    }
+
     
     private void TickFreeze()
     {
@@ -587,21 +631,38 @@ public class GameManager : MonoSingleton<GameManager>
             EndFreeze();
             return;
         }
-        if (TimerPaused || !timerRunning) return;
+        if (freezeIntro || TimerPaused || !timerRunning) return;
 
         freezeTimeLeft -= Time.deltaTime;
-        if (freezeTimeLeft <= 0f) EndFreeze();
+        if (freezeTimeLeft <= 0f)
+        {
+            EndFreeze();
+            return;
+        }
+
+        FreezeProgress?.Invoke(freezeTimeLeft, freezeDuration);
+
+        if (!freezeWarned && freezeTimeLeft <= freezeWarningTime)
+        {
+            freezeWarned = true;
+            if (freezeFx != null) freezeFx.PlayWarning();
+        }
     }
 
-    private void EndFreeze()
+    private void EndFreeze(bool immediate = false)
     {
         freezeTimeLeft = 0f;
+        freezeIntro = false;
         if (hud != null) hud.SetFrozen(false);
+        if (freezeFx != null) freezeFx.Stop(immediate);
+        FreezeEnded?.Invoke();
     }
     
     public void LoadNextLevel()
     {
-        LoadLevel(currentLevelIndex + 1);
+        int next = currentLevelIndex + 1;
+        if (SceneLoader.Instance != null) SceneLoader.Cover(() => LoadLevel(next));
+        else LoadLevel(next);
     }
     
     public void RestartLevel()

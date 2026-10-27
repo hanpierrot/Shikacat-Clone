@@ -59,6 +59,13 @@ public class RoomVisual : MonoBehaviour
         gameObject.SetActive(false);
     }
     
+    public void Relayout(Vector3 center, Vector2 size, float scaleFactor)
+    {
+        transform.position = center;
+        transform.localScale = Vector3.one * scaleFactor;
+        panel.size = size / scaleFactor;
+    }
+
     public void SetUp(Vector3 center, Vector2 size, Sprite floorSprite, Sprite wallSprite, float scaleFactor)
     {
         KillPlaceAnimation();

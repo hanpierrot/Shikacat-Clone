@@ -156,6 +156,9 @@ public class CheatMenu : MonoBehaviour
             Time.timeScale = timeScale;
         }
         showFps = GUILayout.Toggle(showFps, "Show FPS");
+        SoundSettings.MusicOn = GUILayout.Toggle(SoundSettings.MusicOn, "Music");
+        SoundSettings.SfxOn = GUILayout.Toggle(SoundSettings.SfxOn, "SFX");
+        SoundSettings.VibrateOn = GUILayout.Toggle(SoundSettings.VibrateOn, "Vibrate");
 
         Header("Save");
         GUI.color = new Color(1f, 0.5f, 0.5f);

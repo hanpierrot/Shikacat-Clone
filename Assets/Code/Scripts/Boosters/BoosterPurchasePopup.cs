@@ -9,6 +9,7 @@ public class BoosterPurchasePopup : MonoBehaviour
     [SerializeField] private Text priceText;
     [SerializeField] private Text amountText;
     [SerializeField] private Image iconImage;
+    [SerializeField] private CoinHud coinHud;
 
     [SerializeField] private Button buyButton;
     [SerializeField] private Button cancelButton;
@@ -21,6 +22,11 @@ public class BoosterPurchasePopup : MonoBehaviour
     {
         buyButton.onClick.AddListener(OnBuy);
         cancelButton.onClick.AddListener(Close);
+    }
+
+    private void OnEnable()
+    {
+        if (coinHud != null) coinHud.gameObject.SetActive(true);
     }
 
     public void Show(BoosterType type, int price, int pack)
@@ -53,6 +59,7 @@ public class BoosterPurchasePopup : MonoBehaviour
     {
         if (BoosterManager.Instance.TryBuy(current))
         {
+            AudioManager.PlaySfx(Sfx.EarnReward);
             Close();
             return;
         }
@@ -76,6 +83,7 @@ public class BoosterPurchasePopup : MonoBehaviour
 
     private void OnDisable()
     {
+        if (coinHud != null) coinHud.gameObject.SetActive(false);
         DOTween.Kill(this);
         if (GameManager.Instance != null) GameManager.Instance.TimerPaused = false;
     }

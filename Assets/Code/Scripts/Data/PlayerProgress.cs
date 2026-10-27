@@ -11,8 +11,6 @@ public static class PlayerProgress
 
     public static bool HasSavedProgress => PlayerPrefs.HasKey(LevelKey);
 
-    // Chỉ người chơi mới hoàn toàn (chưa có tiến trình lưu) mới phải xem tutorial mở đầu.
-    // Save cũ từ trước khi có tutorial hoặc người chơi đã qua level 1 thì không bị bắt xem lại.
     public static bool ShouldShowTutorial => !TutorialDone && !HasSavedProgress;
 
     public static void SetTutorialDone()
@@ -39,7 +37,7 @@ public static class PlayerProgress
     {
         PlayerPrefs.DeleteKey(LevelKey);
         PlayerPrefs.DeleteKey(TutorialKey);
-        BoosterTutorial.ResetSeen();   // Mọi đường xoá save (menu Editor, cheat) đều phải xoá cả cờ hướng dẫn
+        BoosterTutorial.ResetSeen();
         MechanicIntro.ResetSeen();
         PlayerPrefs.Save();
     }

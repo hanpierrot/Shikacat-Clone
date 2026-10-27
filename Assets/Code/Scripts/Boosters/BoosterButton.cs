@@ -14,6 +14,13 @@ public class BoosterButton : MonoBehaviour
     [SerializeField] private GameObject addIcon;
     [SerializeField] private GameObject activeMark;
     [SerializeField] private Text unlockLevelText;
+    [SerializeField] private Color lockedTint = new Color(0.4f, 0.4f, 0.45f, 1f);   // Màu làm tối khi chưa dùng được
+
+    private bool dimmed;
+    private bool dimInitialized;
+
+    // Tutorial bật cờ này để nút vẫn bấm được dù level chưa bắt đầu
+    public bool ForceUsable { get; set; }
 
     private void OnEnable()
     {
@@ -32,8 +39,27 @@ public class BoosterButton : MonoBehaviour
 
     private void Update()
     {
-        bool usable = BoosterManager.Instance.IsUnlocked(type) && GameManager.Instance != null && !GameManager.Instance.IsGameOver;
+        GameManager gm = GameManager.Instance;
+        bool unlocked = BoosterManager.Instance.IsUnlocked(type);
+
+        // Mới vào màn: chưa dùng được (và tối đi) cho tới khi người chơi chạm vào ô đầu tiên
+        bool started = gm != null && gm.LevelStarted;
+        bool usable = unlocked && gm != null && !gm.IsGameOver && (started || ForceUsable);
         if (button.interactable != usable) button.interactable = usable;
+
+        bool shouldDim = unlocked && gm != null && !gm.IsGameOver && !started && !ForceUsable;
+        if (!dimInitialized || dimmed != shouldDim) ApplyDim(shouldDim);
+    }
+
+    private void ApplyDim(bool dim)
+    {
+        dimmed = dim;
+        dimInitialized = true;
+        Color tint = dim ? lockedTint : Color.white;
+
+        // CanvasRenderer.SetColor nhân vào màu đỉnh, không đụng tới màu Graphic nên không xung đột với hiệu ứng khác
+        foreach (CanvasRenderer cr in GetComponentsInChildren<CanvasRenderer>(true))
+            cr.SetColor(tint);
     }
 
     public event Action Clicked;

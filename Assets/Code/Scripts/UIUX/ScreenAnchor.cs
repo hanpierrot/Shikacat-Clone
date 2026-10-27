@@ -15,13 +15,14 @@ public class ScreenAnchor : MonoBehaviour
     private Canvas canvas;
     private Rect lastSafeArea;
     private Vector2 lastCanvasSize;
+    private Vector2 lastParentSize;
 
     private void OnEnable() => Apply(true);
 
     private void LateUpdate() => Apply(false);
 
     [ContextMenu("Apply")]
-    private void ApplyNow() => Apply(true);
+    public void Refresh() => Apply(true);
 
     private void Apply(bool force)
     {
@@ -29,26 +30,31 @@ public class ScreenAnchor : MonoBehaviour
         if (canvas == null) canvas = GetComponentInParent<Canvas>();
 
         var parent = rect.parent as RectTransform;
-        if (parent == null || canvas == null || Screen.height <= 0) return;
+        if (parent == null || canvas == null) return;
+
+        bool playing = Application.isPlaying;
+        if (playing && Screen.height <= 0) return;
 
         var canvasRect = (RectTransform)canvas.rootCanvas.transform;
         Rect c = canvasRect.rect;
-        Rect safe = Screen.safeArea;
-        if (!force && safe == lastSafeArea && c.size == lastCanvasSize) return;
+        Rect safe = playing ? Screen.safeArea : new Rect(0f, 0f, 1f, 1f);
+        if (!force && safe == lastSafeArea && c.size == lastCanvasSize && parent.rect.size == lastParentSize) return;
 
         lastSafeArea = safe;
         lastCanvasSize = c.size;
+        lastParentSize = parent.rect.size;
 
-        float unitsPerPixel = c.height / Screen.height;
+        bool useSafe = useSafeArea && playing;
+        float unitsPerPixel = playing ? c.height / Screen.height : 0f;
         float y;
         if (edge == Edge.Bottom)
         {
-            float inset = useSafeArea ? safe.yMin * unitsPerPixel : 0f;
+            float inset = useSafe ? safe.yMin * unitsPerPixel : 0f;
             y = c.yMin + inset + offset;
         }
         else
         {
-            float inset = useSafeArea ? (Screen.height - safe.yMax) * unitsPerPixel : 0f;
+            float inset = useSafe ? (Screen.height - safe.yMax) * unitsPerPixel : 0f;
             y = c.yMax - inset - offset;
         }
 

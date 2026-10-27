@@ -86,6 +86,7 @@ public class ReviveTimeOutPanel : MonoBehaviour
     // Không đủ coin: nút rung nhẹ và giá chuyển đỏ trong chốc lát
     public void ShowNotEnoughCoins()
     {
+        AudioManager.PlaySfx(Sfx.Warning);
         CachePriceColor();
 
         playOnButton.transform.DOKill(true);
