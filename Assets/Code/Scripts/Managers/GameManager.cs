@@ -164,12 +164,14 @@ public class GameManager : MonoSingleton<GameManager>
         QualitySettings.vSyncCount = 0;
     }
 
-    private void Start()
+    private IEnumerator Start()
     {
         if (buildController == null)
             Debug.LogWarning("GameManager: RoomBuildController NOT FOUND.");
 
-        levels = LevelLoader.Load(levelsJson);
+        levels = LevelRepository.Get(levelsJson);
+
+        while (SceneLoader.IsCovering) yield return null;
 
         int editorIndex = ConsumeEditorStartLevel();
         useEditorStart = editorIndex >= 0;
@@ -658,7 +660,9 @@ public class GameManager : MonoSingleton<GameManager>
     
     public void LoadNextLevel()
     {
-        LoadLevel(currentLevelIndex + 1);
+        int next = currentLevelIndex + 1;
+        if (SceneLoader.Instance != null) SceneLoader.Cover(() => LoadLevel(next));
+        else LoadLevel(next);
     }
     
     public void RestartLevel()

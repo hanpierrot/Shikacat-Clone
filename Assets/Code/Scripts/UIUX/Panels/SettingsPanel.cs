@@ -15,6 +15,8 @@ public class SettingsPanel : ModalPanel
         homeButton.onClick.AddListener(() => HomeRequested?.Invoke());
     }
 
+    public void SetHomeVisible(bool visible) => homeButton.gameObject.SetActive(visible);
+
     protected override void OnEnable()
     {
         base.OnEnable();

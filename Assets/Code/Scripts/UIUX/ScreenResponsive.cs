@@ -107,6 +107,9 @@ public class ScreenResponsive : MonoBehaviour
         foreach (ScreenAnchor anchor in GetComponentsInChildren<ScreenAnchor>(true))
             anchor.Refresh();
 
+        foreach (ScreenCover cover in GetComponentsInChildren<ScreenCover>(true))
+            cover.Refresh();
+
         if (background != null) background.Apply();
         if (!Application.isPlaying) return;
 

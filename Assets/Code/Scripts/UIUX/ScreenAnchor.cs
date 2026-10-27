@@ -15,6 +15,7 @@ public class ScreenAnchor : MonoBehaviour
     private Canvas canvas;
     private Rect lastSafeArea;
     private Vector2 lastCanvasSize;
+    private Vector2 lastParentSize;
 
     private void OnEnable() => Apply(true);
 
@@ -37,10 +38,11 @@ public class ScreenAnchor : MonoBehaviour
         var canvasRect = (RectTransform)canvas.rootCanvas.transform;
         Rect c = canvasRect.rect;
         Rect safe = playing ? Screen.safeArea : new Rect(0f, 0f, 1f, 1f);
-        if (!force && safe == lastSafeArea && c.size == lastCanvasSize) return;
+        if (!force && safe == lastSafeArea && c.size == lastCanvasSize && parent.rect.size == lastParentSize) return;
 
         lastSafeArea = safe;
         lastCanvasSize = c.size;
+        lastParentSize = parent.rect.size;
 
         bool useSafe = useSafeArea && playing;
         float unitsPerPixel = playing ? c.height / Screen.height : 0f;
